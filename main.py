@@ -4,11 +4,15 @@ import json
 import webview
 import datetime
 import traceback
+import logging
+import threading
+from logging.handlers import RotatingFileHandler
 
 should_launch_main_app = False
 saved_username = None
 saved_profile = None
 saved_theme = None
+current_version = "1.0.2"
 
 def resource_path(relative_path):
     # Determines the correct path for bundled resources
@@ -20,34 +24,132 @@ def resource_path(relative_path):
 
     return os.path.join(base_path, relative_path)
 
+def setup_logging():
+    # Set up logging to file
+    try:
+        appdata_path = os.path.join(os.environ['APPDATA'], 'SkyCrypt+')
+        
+        # Check if the folder exists
+        os.makedirs(appdata_path, exist_ok=True)
+        
+        log_file_path = os.path.join(appdata_path, 'skycrypt_plus.log')
+        
+        # Configure file handler (10 MB max, 1 backup files)
+        file_handler = RotatingFileHandler(
+            log_file_path, 
+            maxBytes=10*1024*1024,  # 10 MB
+            backupCount=1,
+            encoding='utf-8'
+        )
+        
+        # Configure the formatter
+        formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+        file_handler.setFormatter(formatter)
+        
+        # Configure the root logger
+        root_logger = logging.getLogger()
+        root_logger.setLevel(logging.INFO)
+        root_logger.addHandler(file_handler)
+        
+        # Log startup message
+        logging.info("===== SkyCrypt+ Started =====")
+        logging.info(f"Log file initialized at: {log_file_path}")
+        
+    except Exception as e:
+        logging.error(f"Error setting up logging: {e}")
+
 def read_config():
-    # Reads the configuration file from the user's Documents folder
+    # Reads the configuration file from the user's APPDATA folder
     # Returns the config if found, otherwise returns None
     try:
-        documents_path = os.path.join(os.path.expanduser('~'), 'Documents')
-        config_file_path = os.path.join(documents_path, 'SkyCrypt+', 'config.json')
+        appdata_path = os.path.join(os.environ['APPDATA'], 'SkyCrypt+')
+        config_file_path = os.path.join(appdata_path, 'config.json')
         
         if os.path.exists(config_file_path):
             with open(config_file_path, 'r') as config_file:
                 return json.load(config_file)
         return None
     except Exception as e:
-        print(f"Error reading config file: {e}")
+        logging.error(f"Error reading config file: {e}")
         return None
+
+def update_config_version():
+    """
+    Updates the version in the config file to match the current application version
+    """
+    try:
+        # Get the current config
+        config = read_config()
+        if not config:
+            logging.info("No existing config found to update version")
+            return False
+        
+        # Update the version in the config if different
+        if config.get("version") != current_version:
+            config["version"] = current_version
+            
+            # Save the updated config
+            appdata_path = os.path.join(os.environ['APPDATA'], 'SkyCrypt+')
+            config_file_path = os.path.join(appdata_path, 'config.json')
+            
+            with open(config_file_path, 'w') as config_file:
+                json.dump(config, config_file, indent=4)
+            
+            logging.info(f"Updated config version to {current_version}")
+        
+        return True
+    except Exception as e:
+        logging.error(f"Error updating config version: {e}")
+        return False
+
+def check_for_updates_async(window):
+    """
+    Performs an asynchronous check for updates and sends the result to the window
+    """
+    def check_updates_worker():
+        try:
+            update_info = check_for_updates()
+            if update_info and update_info["update_available"]:
+                # Send update info to the window
+                window.evaluate_js(f"""
+                    window.updateInfo = {{
+                        currentVersion: "{update_info['current_version']}",
+                        latestVersion: "{update_info['latest_version']}",
+                        releaseUrl: "{update_info['release_url']}"
+                    }};
+                    
+                    // Dispatch a custom event that our injected script will listen for
+                    const updateEvent = new CustomEvent('skycryptPlusUpdateAvailable', {{ 
+                        detail: window.updateInfo 
+                    }});
+                    document.dispatchEvent(updateEvent);
+                """)
+                logging.info(f"Update available: {update_info['current_version']} → {update_info['latest_version']}")
+            else:
+                logging.info("No updates available or couldn't check for updates")
+        except Exception as e:
+            logging.error(f"Error in update checker thread: {e}")
+    
+    # Start the check in a separate thread to avoid blocking the UI
+    update_thread = threading.Thread(target=check_updates_worker)
+    update_thread.daemon = True
+    update_thread.start()
 
 def save_config(username, profile, theme="default.json"):
     # Saves the user's Minecraft username, profile name, and theme to a configuration file
     try:
-        documents_path = os.path.join(os.path.expanduser('~'), 'Documents')
-        skycrypt_folder_path = os.path.join(documents_path, 'SkyCrypt+')
-        config_file_path = os.path.join(skycrypt_folder_path, 'config.json')
+        appdata_path = os.path.join(os.environ['APPDATA'], 'SkyCrypt+')
+        config_file_path = os.path.join(appdata_path, 'config.json')
         
         # Ensure the folder exists
-        os.makedirs(skycrypt_folder_path, exist_ok=True)
+        os.makedirs(appdata_path, exist_ok=True)
+        
+        # Get the current version - should be defined in a central place
+        current_version = "1.0.1"  # This should match the version in update_config_version
         
         # Prepare configuration data
         config = {
-            "version": "1.0.0",
+            "version": current_version,
             "created_at": str(datetime.datetime.now()),
             "player_name": username,
             "default_profile": profile,
@@ -58,10 +160,10 @@ def save_config(username, profile, theme="default.json"):
         with open(config_file_path, 'w') as config_file:
             json.dump(config, config_file, indent=4)
         
-        print(f"Configuration saved for {username} with profile {profile} and theme {theme}")
+        logging.info(f"Configuration saved for {username} with profile {profile} and theme {theme}")
         return True
     except Exception as e:
-        print(f"Error saving config file: {e}")
+        logging.error(f"Error saving config file: {e}")
         return False
 
 def show_error_window(error_message):
@@ -352,6 +454,66 @@ def create_first_time_config_window():
     if 'should_launch_main_app' in globals() and should_launch_main_app:
         create_webview(saved_username, saved_profile, saved_theme)
 
+def check_for_updates():
+    """
+    Checks the SkyCrypt+ GitHub repository for the latest release version
+    and compares it to the current version in the config file.
+    Returns the latest version and a boolean indicating if an update is available.
+    """
+    import requests
+    import logging
+    import json
+    import os
+    from packaging import version
+
+    try:
+        # Get the latest release from GitHub API
+        response = requests.get(
+            "https://api.github.com/repos/Balionelis/SkyCryptPlus/releases/latest",
+            headers={"Accept": "application/vnd.github.v3+json"},
+            timeout=5
+        )
+        
+        if response.status_code == 200:
+            release_data = response.json()
+            latest_version = release_data.get("tag_name", "").lstrip("v")
+            release_url = release_data.get("html_url", "https://github.com/Balionelis/SkyCryptPlus/releases")
+            
+            # Read current version from config
+            try:
+                appdata_path = os.path.join(os.environ['APPDATA'], 'SkyCrypt+')
+                config_file_path = os.path.join(appdata_path, 'config.json')
+                
+                if os.path.exists(config_file_path):
+                    with open(config_file_path, 'r') as config_file:
+                        config = json.load(config_file)
+                        current_version = config.get("version", "0.0.0")
+                        
+                        # Compare versions
+                        update_available = version.parse(latest_version) > version.parse(current_version)
+                        logging.info(f"Version check: Current={current_version}, Latest={latest_version}, Update Available={update_available}")
+                        
+                        return {
+                            "current_version": current_version,
+                            "latest_version": latest_version,
+                            "update_available": update_available,
+                            "release_url": release_url
+                        }
+                
+                logging.warning("Config file not found or no version specified")
+                return None
+                
+            except Exception as e:
+                logging.error(f"Error reading config during update check: {e}")
+                return None
+        else:
+            logging.error(f"GitHub API returned status code {response.status_code}")
+            return None
+            
+    except Exception as e:
+        logging.error(f"Error checking for updates: {e}")
+        return None
+
 def create_webview(username, profile, theme=None):
     # If no theme is provided, try to read from config
     if not theme:
@@ -372,244 +534,150 @@ def create_webview(username, profile, theme=None):
             text_select=True
         )
 
-        # JavaScript for website customization
-        reload_script = f"""
+        # All JavaScript for website customization in one big script
+        js_code = f"""
         (function() {{
-            function removeAdditionalHeaderElements() {{
+            console.log('SkyCrypt+ JavaScript starting');
+            
+            // Function to remove unneeded header elements
+            function removeHeaderElements() {{
+                console.log('Removing header elements');
                 try {{
-                    const additionalPlayerStatsDiv = document.getElementById('additional_player_stats');
-                    if (additionalPlayerStatsDiv) {{
-                        additionalPlayerStatsDiv.remove();
-                        console.log('Entire additional_player_stats div removed');
-                    }}
-
-                    const infoButton = document.getElementById('info-button');
-                    if (infoButton) {{
-                        infoButton.remove();
-                        console.log('About button removed');
-                    }}
-
-                    const apiButton = document.getElementById('api_button');
-                    if (apiButton) {{
-                        apiButton.remove();
-                        console.log('API button removed');
-                    }}
-
-                    const blmLogo = document.querySelector('a.blm-logo');
-                    if (blmLogo) {{
-                        blmLogo.remove();
-                        console.log('BLM logo removed');
-                    }}
-
-                    const infoBox = document.querySelector('#info-box');
-                    if(infoBox) {{
-                        infoBox.remove();
-                        console.log('Info Box removed');
-                    }}
+                    document.getElementById('additional_player_stats')?.remove();
+                    document.getElementById('info-button')?.remove();
+                    document.getElementById('api_button')?.remove();
+                    document.querySelector('a.blm-logo')?.remove();
+                    document.getElementById('info-box')?.remove();
                 }} catch (error) {{
                     console.error('Error removing header elements:', error);
                 }}
             }}
 
-
-            function addNetworthElement() {{
+            // Function to add networth element at the top
+            function addNetworth() {{
+                console.log('Adding networth element');
                 try {{
-                    const existingNetworth = document.querySelector('#additional_stats_container .additional-stat span[data-tippy-content*="Total Networth"] .stat-value');
-                    const statsForProfile = document.getElementById('stats_for_profile');
+                    const networth = document.querySelector('#additional_stats_container .additional-stat span[data-tippy-content*="Total Networth"] .stat-value');
+                    const profileStats = document.getElementById('stats_for_profile');
                     
-                    if (statsForProfile && existingNetworth) {{
-                        const networthValue = existingNetworth.textContent.trim();
+                    if (profileStats && networth) {{
+                        const value = networth.textContent.trim();
                         
-                        const networthElement = document.createElement('span');
-                        networthElement.id = 'player_networth';
-                        networthElement.className = 'player-networth';
-                        networthElement.style.cssText = `
-                            position: relative;
-                            display: inline-block;
-                            font-weight: 600;
-                            cursor: context-menu;
-                            background-color: rgba(127, 127, 127, .2);
-                            border-radius: 100px;
-                            padding: 0 15px;
-                            height: 54px;
-                            line-height: 54px;
-                            vertical-align: middle;
-                            font-size: 30px;
-                            margin-left: 10px;
-                        `;
+                        const networthEl = document.createElement('span');
+                        networthEl.id = 'player_networth';
+                        networthEl.className = 'player-networth';
+                        networthEl.style.cssText = 'position: relative; display: inline-block; font-weight: 600; cursor: context-menu; background-color: rgba(127, 127, 127, .2); border-radius: 100px; padding: 0 15px; height: 54px; line-height: 54px; vertical-align: middle; font-size: 30px; margin-left: 10px;';
                         
-                        const networthLabelSpan = document.createElement('span');
-                        networthLabelSpan.textContent = 'Networth: ';
+                        const labelSpan = document.createElement('span');
+                        labelSpan.textContent = 'Networth: ';
                         
-                        const networthValueSpan = document.createElement('span');
-                        networthValueSpan.textContent = networthValue;
-                        networthValueSpan.style.color = '#55FF55';
+                        const valueSpan = document.createElement('span');
+                        valueSpan.textContent = value;
+                        valueSpan.style.color = '#55FF55';
                         
-                        networthElement.appendChild(networthLabelSpan);
-                        networthElement.appendChild(networthValueSpan);
+                        networthEl.appendChild(labelSpan);
+                        networthEl.appendChild(valueSpan);
                         
-                        statsForProfile.insertAdjacentElement('afterend', networthElement);
-                        console.log('Networth element added successfully');
+                        profileStats.insertAdjacentElement('afterend', networthEl);
+                        console.log('Networth added');
                     }} else {{
-                        console.warn('Could not find networth element or stats_for_profile');
-                        console.warn('Existing Networth Element:', existingNetworth);
-                        console.warn('Stats For Profile:', statsForProfile);
+                        console.warn('Could not find networth or stats_for_profile');
                     }}
                 }} catch (error) {{
-                    console.error('Error adding Networth element:', error);
+                    console.error('Error adding Networth:', error);
                 }}
             }}
 
-            function removeDonationBanner() {{
+            // Remove donation banners
+            function removeBanners() {{
                 try {{
-                    const banners = document.querySelectorAll('figure.banner');
-                    banners.forEach(banner => banner.remove());
-                    console.log('Donation banner removed');
+                    document.querySelectorAll('figure.banner').forEach(banner => banner.remove());
+                    console.log('Banners removed');
                 }} catch (error) {{
-                    console.error('Error removing donation banner:', error);
+                    console.error('Error removing banners:', error);
                 }}
             }}
 
-            function modifyThemesButton() {{
-                const themesButton = document.getElementById('themes-button');
+            // Hide and watch the themes button
+            function handleThemes() {{
+                const themesBtn = document.getElementById('themes-button');
                 const themesList = document.getElementById('themes-box');
                 
-                if (themesButton && themesList) {{
-                    themesButton.style.display = 'none';
+                if (themesBtn && themesList) {{
+                    themesBtn.style.display = 'none';
                     themesList.style.display = 'none';
                     themesList.style.visibility = 'hidden';
                     
-                    // Add a MutationObserver to track theme selection
-                    const observer = new MutationObserver((mutations) => {{
+                    // Watch for theme changes
+                    new MutationObserver((mutations) => {{
                         mutations.forEach((mutation) => {{
                             if (mutation.type === 'attributes' && mutation.attributeName === 'class') {{
-                                const themeRadios = document.querySelectorAll('input[name="theme"]');
-                                themeRadios.forEach(radio => {{
+                                document.querySelectorAll('input[name="theme"]').forEach(radio => {{
                                     radio.addEventListener('change', () => {{
-                                        // Automatically apply selection 
                                         if (!localStorage.getItem('themesButtonVisible')) {{
                                             localStorage.setItem('themesButtonVisible', 'true');
-                                            
-                                            // Update theme and save via API
-                                            const selectedTheme = radio.value.split('/').pop();
-                                            window.pywebview.api.save_theme(selectedTheme);
+                                            const theme = radio.value.split('/').pop();
+                                            window.pywebview.api.save_theme(theme);
                                         }}
                                     }});
                                 }});
                             }}
                         }});
-                    }});
-
-                    // Configure the observer to watch for class changes
-                    observer.observe(themesButton, {{ attributes: true }});
+                    }}).observe(themesBtn, {{ attributes: true }});
                 }}
-            }}            
-            function setupReloadAndWebsitesButtons() {{
+            }}
+            
+            // Add all the custom buttons
+            function addCustomButtons() {{
+                console.log('Adding custom buttons');
+                
+                // Get username and profile from URL
+                const pathParts = window.location.pathname.split('/');
+                const username = pathParts[2] || '';
+                const profile = pathParts[3] || '';
+                const isMainPage = window.location.href === 'https://sky.shiiyu.moe/';
+                
+                // Create button container
                 const buttonContainer = document.createElement('div');
                 buttonContainer.id = 'custom-buttons-container';
-                buttonContainer.style.cssText = `
-                    position: fixed;
-                    bottom: 20px;
-                    right: 20px;
-                    z-index: 9999;
-                    display: flex;
-                    gap: 10px;
-                    align-items: center;
-                `;
+                buttonContainer.style.cssText = 'position: fixed; bottom: 20px; right: 20px; z-index: 9999; display: flex; gap: 10px; align-items: center;';
 
-                const reloadButton = document.createElement('button');
-                reloadButton.id = 'custom-reload-button';
-                reloadButton.textContent = 'Refresh Page';
-                reloadButton.style.cssText = `
-                    padding: 10px;
-                    background-color: #282828;
-                    color: white;
-                    border: none;
-                    border-radius: 5px;
-                    cursor: pointer;
-                    outline: none;
-                `;
+                // Create refresh button
+                const refreshBtn = document.createElement('button');
+                refreshBtn.id = 'custom-reload-button';
+                refreshBtn.textContent = 'Refresh Page';
+                refreshBtn.style.cssText = 'padding: 10px; background-color: #282828; color: white; border: none; border-radius: 5px; cursor: pointer; outline: none;';
+                refreshBtn.onclick = () => window.location.reload();
 
-                const isMainPage = window.location.href === 'https://sky.shiiyu.moe/';
+                // Create websites button
+                const sitesBtn = document.createElement('button');
+                sitesBtn.id = 'custom-websites-button';
+                sitesBtn.textContent = 'Other Websites';
+                sitesBtn.style.cssText = `padding: 10px; background-color: #282828; color: white; border: none; border-radius: 5px; cursor: pointer; outline: none; display: ${{isMainPage ? 'none' : 'block'}};`;
 
-                const websitesButton = document.createElement('button');
-                websitesButton.id = 'custom-websites-button';
-                websitesButton.textContent = 'Other Websites';
-                websitesButton.style.cssText = `
-                    padding: 10px;
-                    background-color: #282828;
-                    color: white;
-                    border: none;
-                    border-radius: 5px;
-                    cursor: pointer;
-                    outline: none;
-                    display: ${{isMainPage ? 'none' : 'block'}};
-                `;
+                // Create websites dropdown
+                const sitesDropdown = document.createElement('div');
+                sitesDropdown.id = 'websites-dropdown';
+                sitesDropdown.style.cssText = 'position: fixed; bottom: 80px; right: 140px; z-index: 10000; background-color: #282828; border: 1px solid #FFFFFF; border-radius: 5px; display: none; flex-direction: column; min-width: 250px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);';
 
-                const websitesList = document.createElement('div');
-                websitesList.id = 'websites-dropdown';
-                websitesList.style.cssText = `
-                    position: fixed;
-                    bottom: 80px;
-                    right: 140px;
-                    z-index: 10000;
-                    background-color: #282828;
-                    border: 1px solid #FFFFFF;
-                    border-radius: 5px;
-                    display: none;
-                    flex-direction: column;
-                    min-width: 250px;
-                    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-                `;
+                // Create themes button
+                const themeBtn = document.createElement('button');
+                themeBtn.id = 'custom-theme-button';
+                themeBtn.textContent = 'Themes';
+                themeBtn.style.cssText = 'width: 75px; height: 35px; background-color: #282828; color: white; border: none; border-radius: 5px; cursor: pointer; display: flex; justify-content: center; align-items: center;';
 
-                const themeButton = document.createElement('button');
-                themeButton.id = 'custom-theme-button';
-                themeButton.textContent = 'Themes';
-                themeButton.style.cssText = `
-                    width: 75px;
-                    height: 35px;
-                    background-color: #282828;
-                    color: white;
-                    border: none;
-                    border-radius: 5px;
-                    cursor: pointer;
-                    display: flex;
-                    justify-content: center;
-                    align-items: center;
-                `;
+                // Create themes dropdown
+                const themesDropdown = document.createElement('div');
+                themesDropdown.id = 'themes-dropdown';
+                themesDropdown.style.cssText = 'position: fixed; bottom: 80px; right: 100px; z-index: 10000; background-color: #282828; border: 1px solid #FFFFFF; border-radius: 5px; display: none; flex-direction: column; min-width: 250px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);';
 
-                const themesList = document.createElement('div');
-                themesList.id = 'themes-dropdown';
-                themesList.style.cssText = `
-                    position: fixed;
-                    bottom: 80px;
-                    right: 100px;
-                    z-index: 10000;
-                    background-color: #282828;
-                    border: 1px solid #FFFFFF;
-                    border-radius: 5px;
-                    display: none;
-                    flex-direction: column;
-                    min-width: 250px;
-                    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-                `;
+                // Create Patreon button
+                const patreonBtn = document.createElement('button');
+                patreonBtn.id = 'custom-patreon-button';
+                patreonBtn.style.cssText = 'width: 35px; height: 35px; background-color: #FF424D; border: none; border-radius: 5px; cursor: pointer; padding: 4px; outline: none; display: flex; justify-content: center; align-items: center;';
+                patreonBtn.onclick = () => window.open('https://www.patreon.com/shiiyu', '_blank');
 
-                const patreonButton = document.createElement('button');
-                patreonButton.id = 'custom-patreon-button';
-                patreonButton.style.cssText = `
-                    width: 35px;
-                    height: 35px;
-                    background-color: #FF424D;
-                    border: none;
-                    border-radius: 5px;
-                    cursor: pointer;
-                    padding: 4px;
-                    outline: none;
-                    display: flex;
-                    justify-content: center;
-                    align-items: center;
-                `;
-
+                // Create Patreon SVG
                 const patreonSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
                 patreonSvg.setAttribute('version', '1.2');
                 patreonSvg.setAttribute('baseProfile', 'tiny');
@@ -617,42 +685,17 @@ def create_webview(username, profile, theme=None):
                 patreonSvg.setAttribute('overflow', 'visible');
                 patreonSvg.style.width = '100%';
                 patreonSvg.style.height = '100%';
+                patreonSvg.innerHTML = '<path fill="#FF424D" d="M507.4,1014.8L507.4,1014.8C227.2,1014.8,0,787.7,0,507.4v0C0,227.2,227.2,0,507.4,0h0c280.2,0,507.4,227.2,507.4,507.4v0C1014.8,787.7,787.7,1014.8,507.4,1014.8z"/><g><circle fill="#FFFFFF" cx="586.4" cy="439.1" r="204.6"/><rect x="223.8" y="234.5" fill="#241E12" width="100" height="545.8"/></g>';
+                patreonBtn.appendChild(patreonSvg);
 
-                patreonSvg.innerHTML = `
-                    <path fill="#FF424D" d="M507.4,1014.8L507.4,1014.8C227.2,1014.8,0,787.7,0,507.4v0C0,227.2,227.2,0,507.4,0h0
-                        c280.2,0,507.4,227.2,507.4,507.4v0C1014.8,787.7,787.7,1014.8,507.4,1014.8z"/>
-                    <g>
-                        <circle fill="#FFFFFF" cx="586.4" cy="439.1" r="204.6"/>
-                        <rect x="223.8" y="234.5" fill="#241E12" width="100" height="545.8"/>
-                    </g>
-                `;
-
-                patreonButton.appendChild(patreonSvg);
-                    
-                const extractUsernameAndProfile = () => {{
-                    const pathParts = window.location.pathname.split('/');
-                    const username = pathParts[2] || '';
-                    const profile = pathParts[3] || '';
-                    return {{ username, profile }};
-                }};
-
-                const {{ username, profile }} = extractUsernameAndProfile();
-
+                // Define websites
                 const websites = [
-                    {{
-                        name: "Plancke",
-                        url: `https://plancke.io/hypixel/player/stats/${{username}}`
-                    }},
-                    {{
-                        name: "EliteBot",
-                        url: `https://elitebot.dev/@${{username}}/${{profile}}`
-                    }},
-                    {{
-                        name: "Coflnet",
-                        url: `https://sky.coflnet.com/player/${{username}}`
-                    }}
+                    {{ name: "Plancke", url: `https://plancke.io/hypixel/player/stats/${{username}}` }},
+                    {{ name: "EliteBot", url: `https://elitebot.dev/@${{username}}/${{profile}}` }},
+                    {{ name: "Coflnet", url: `https://sky.coflnet.com/player/${{username}}` }}
                 ];
 
+                // Define themes
                 const themes = [
                     {{ name: "Default Theme", file: "default.json" }},
                     {{ name: "Draconic Purple Theme", file: "draconic.json" }},
@@ -665,242 +708,258 @@ def create_webview(username, profile, theme=None):
                     {{ name: "April Fools 2024 Theme", file: "april-fools-2024.json" }}
                 ];
 
-                // Populate websites dropdown
+                // Add website links
                 websites.forEach(site => {{
-                    const siteLink = document.createElement('a');
-                    siteLink.textContent = site.name;
-                    siteLink.href = site.url;
-                    siteLink.target = '_blank';
-                    siteLink.style.cssText = `
-                        padding: 10px;
-                        color: #FFFFFF;
-                        text-decoration: none;
-                        border-bottom: 1px solid #e0e0e0;
-                        transition: background-color 0.2s;
-                    `;
-                    siteLink.addEventListener('mouseover', () => {{
-                        siteLink.style.backgroundColor = 'rgba(186, 95, 222, 0.1)';
-                    }});
-                    siteLink.addEventListener('mouseout', () => {{
-                        siteLink.style.backgroundColor = 'transparent';
-                    }});
-                    websitesList.appendChild(siteLink);
+                    const link = document.createElement('a');
+                    link.textContent = site.name;
+                    link.href = site.url;
+                    link.target = '_blank';
+                    link.style.cssText = 'padding: 10px; color: #FFFFFF; text-decoration: none; border-bottom: 1px solid #e0e0e0; transition: background-color 0.2s;';
+                    link.onmouseover = () => link.style.backgroundColor = 'rgba(186, 95, 222, 0.1)';
+                    link.onmouseout = () => link.style.backgroundColor = 'transparent';
+                    sitesDropdown.appendChild(link);
                 }});
 
-                // Populate themes dropdown
+                // Add theme options
                 const currentTheme = localStorage.getItem('currentTheme') || 'default.json';
                 themes.forEach(theme => {{
-                    const themePicker = document.createElement('div');
-                    themePicker.textContent = theme.name;
-                    themePicker.style.cssText = `
-                        padding: 10px;
-                        color: ${{theme.file === currentTheme ? 'white' : '#FFFFFF'}};
-                        background-color: ${{theme.file === currentTheme ? '#282828' : 'transparent'}};
-                        text-decoration: none;
-                        border-bottom: 1px solid #e0e0e0;
-                        transition: background-color 0.2s;
-                        cursor: pointer;
-                    `;
-
-                    themePicker.addEventListener('click', () => {{
+                    const option = document.createElement('div');
+                    option.textContent = theme.name;
+                    option.style.cssText = `padding: 10px; color: ${{theme.file === currentTheme ? 'white' : '#FFFFFF'}}; background-color: ${{theme.file === currentTheme ? '#282828' : 'transparent'}}; text-decoration: none; border-bottom: 1px solid #e0e0e0; transition: background-color 0.2s; cursor: pointer;`;
+                    
+                    option.onclick = () => {{
                         const themesButton = document.getElementById('themes-button');
                         if (themesButton) {{
                             themesButton.click();
                             
                             setTimeout(() => {{
-                                const themeRadio = document.querySelector(`input[value="/resources/themes/${{theme.file}}"]`);
+                                const radio = document.querySelector(`input[value="/resources/themes/${{theme.file}}"]`);
                                 
-                                if (themeRadio) {{
-                                    themeRadio.click();
-                                    
-                                    // Save theme to localStorage and send to Python
+                                if (radio) {{
+                                    radio.click();
                                     localStorage.setItem('currentTheme', theme.file);
                                     window.pywebview.api.save_theme(theme.file);
 
-                                    // Recalculate theme options
-                                    document.querySelectorAll('#themes-dropdown > div').forEach(themeOption => {{
-                                        themeOption.style.color = themeOption.textContent === themePicker.textContent ? 'white' : '#FFFFFF';
-                                        themeOption.style.backgroundColor = themeOption.textContent === themePicker.textContent ? '#282828' : 'transparent';
+                                    // Update selected theme appearance
+                                    document.querySelectorAll('#themes-dropdown > div').forEach(opt => {{
+                                        opt.style.color = opt.textContent === option.textContent ? 'white' : '#FFFFFF';
+                                        opt.style.backgroundColor = opt.textContent === option.textContent ? '#FF424D' : 'transparent';
                                     }});
 
                                     if (themesButton.getAttribute('aria-expanded') === 'true') {{
                                         themesButton.click();
                                     }}
                                     
-                                    themesList.style.display = 'none';
+                                    themesDropdown.style.display = 'none';
                                 }}
                             }}, 300);
                         }}
-                    }});
-
-                    themesList.appendChild(themePicker);
+                    }};
+                    
+                    themesDropdown.appendChild(option);
                 }});
 
-                // Event listeners for websites dropdown
-                websitesButton.addEventListener('click', () => {{
-                    if (websitesList.style.display === 'none' || websitesList.style.display === '') {{
-                        websitesList.style.display = 'flex';
-                    }} else {{
-                        websitesList.style.display = 'none';
+                // Toggle websites dropdown
+                sitesBtn.onclick = () => {{
+                    sitesDropdown.style.display = sitesDropdown.style.display === 'none' || sitesDropdown.style.display === '' ? 'flex' : 'none';
+                }};
+
+                // Toggle themes dropdown
+                themeBtn.onclick = () => {{
+                    themesDropdown.style.display = themesDropdown.style.display === 'none' || themesDropdown.style.display === '' ? 'flex' : 'none';
+                }};
+
+                // Close dropdowns when clicking outside
+                document.addEventListener('click', (e) => {{
+                    if (!sitesBtn.contains(e.target) && !sitesDropdown.contains(e.target)) {{
+                        sitesDropdown.style.display = 'none';
+                    }}
+                    if (!themeBtn.contains(e.target) && !themesDropdown.contains(e.target)) {{
+                        themesDropdown.style.display = 'none';
                     }}
                 }});
 
-                // Event listeners for themes dropdown
-                themeButton.addEventListener('click', () => {{
-                    if (themesList.style.display === 'none' || themesList.style.display === '') {{
-                        themesList.style.display = 'flex';
-                    }} else {{
-                        themesList.style.display = 'none';
-                    }}
-                }});
+                // Add all buttons to container
+                buttonContainer.appendChild(refreshBtn);
+                buttonContainer.appendChild(sitesBtn);
+                buttonContainer.appendChild(themeBtn);
+                buttonContainer.appendChild(patreonBtn);
 
-                // Common click-outside logic for dropdowns
-                document.addEventListener('click', (event) => {{
-                    if (!websitesButton.contains(event.target) && !websitesList.contains(event.target)) {{
-                        websitesList.style.display = 'none';
-                    }}
-                    if (!themeButton.contains(event.target) && !themesList.contains(event.target)) {{
-                        themesList.style.display = 'none';
-                    }}
-                }});
-
-                // Patreon button event
-                patreonButton.addEventListener('click', () => {{
-                    window.open('https://www.patreon.com/shiiyu', '_blank');
-                }});
-
-                // Reload button event
-                reloadButton.addEventListener('click', () => {{
-                    window.location.reload();
-                }});
-
-                // Append buttons to container
-                buttonContainer.appendChild(reloadButton);
-                buttonContainer.appendChild(websitesButton);
-                buttonContainer.appendChild(themeButton);
-                buttonContainer.appendChild(patreonButton);
-
+                // Add everything to the page
                 document.body.appendChild(buttonContainer);
-                document.body.appendChild(websitesList);
-                document.body.appendChild(themesList);
-
-                // Add call to modifyThemesButton
-                modifyThemesButton();
+                document.body.appendChild(sitesDropdown);
+                document.body.appendChild(themesDropdown);
             }}
 
-            function selectDraconicThemeSilently() {{ 
-                // Check if theme has been set on first load
+            // Apply theme from config
+            function applyTheme() {{
                 const hasSetTheme = localStorage.getItem('initialThemeSet');
                 
                 if (!hasSetTheme) {{
-                    const currentTheme = '{theme}';  // Directly use the theme from config
+                    const themeToUse = '{theme}';
                     
-                    const themesButton = document.getElementById('themes-button'); 
-                    if (themesButton) {{ 
-                        themesButton.click(); 
+                    const themesBtn = document.getElementById('themes-button'); 
+                    if (themesBtn) {{ 
+                        themesBtn.click(); 
                         
                         setTimeout(() => {{ 
-                            const themeRadio = document.querySelector(`input[value="/resources/themes/${{currentTheme}}"]`); 
-                            if (themeRadio) {{ 
-                                themeRadio.click(); 
+                            const radio = document.querySelector(`input[value="/resources/themes/${{themeToUse}}"]`); 
+                            if (radio) {{ 
+                                radio.click(); 
                                 
                                 setTimeout(() => {{
-                                    if (themesButton.getAttribute('aria-expanded') === 'true') {{ 
-                                        themesButton.click(); 
+                                    if (themesBtn.getAttribute('aria-expanded') === 'true') {{ 
+                                        themesBtn.click(); 
                                     }} 
                                     
-                                    // Save theme to localStorage
-                                    localStorage.setItem('currentTheme', currentTheme);
-                                    
-                                    // Mark theme as set
+                                    localStorage.setItem('currentTheme', themeToUse);
                                     localStorage.setItem('initialThemeSet', 'true');
                                 }}, 300);
-                            }} else {{
-                                console.warn(`Theme radio for ${{currentTheme}} not found`);
                             }}
                         }}, 500); 
-                    }} else {{
-                        console.warn('Themes button not found');
                     }}
                 }}
             }}
-            function updateSiteName() {{
+
+            // Change site name
+            function changeSiteName() {{
                 try {{
-                    const siteNameElement = document.querySelector('#site_name');
-                    if (siteNameElement) {{
-                        siteNameElement.textContent = 'SkyCrypt+';
-                        console.log('Site name updated to SkyCrypt+');
-                    }} else {{
-                        console.warn('Site name element not found');
+                    const nameEl = document.querySelector('#site_name');
+                    if (nameEl) {{
+                        nameEl.textContent = 'SkyCrypt+';
                     }}
                 }} catch (error) {{
-                    console.error('Error updating site name:', error);
+                    console.error('Error changing site name:', error);
                 }}
-            }}            
+            }}
+            
+            // Update button function
+            function addUpdateButton(updateInfo) {{
+                try {{
+                    const buttonContainer = document.getElementById('custom-buttons-container');
+                    
+                    if (!buttonContainer || document.getElementById('update-available-button')) {{
+                        return;
+                    }}
+                    
+                    const updateBtn = document.createElement('button');
+                    updateBtn.id = 'update-available-button';
+                    updateBtn.textContent = `Update Available: v${{updateInfo.latestVersion}}`;
+                    updateBtn.style.cssText = 'padding: 10px; background-color: #FF424D; color: white; border: none; border-radius: 5px; cursor: pointer; outline: none;';
+                    
+                    updateBtn.onmouseout = () => updateBtn.style.backgroundColor = '#FF424D';
+                    updateBtn.onclick = () => window.open(updateInfo.releaseUrl, '_blank');
+                    
+                    buttonContainer.insertBefore(updateBtn, buttonContainer.firstChild);
+                }} catch (error) {{
+                    console.error('Error adding update button:', error);
+                }}
+            }}
+            
+            // Listen for update events
+            document.addEventListener('skycryptPlusUpdateAvailable', (event) => {{
+                addUpdateButton(event.detail);
+            }});
+            
+            if (window.updateInfo) {{
+                addUpdateButton(window.updateInfo);
+            }}
 
+            // Run all the functions when page loads
+            function runAll() {{
+                console.log('Running all SkyCrypt+ modifications');
+                removeHeaderElements();
+                addNetworth();
+                addCustomButtons();
+                removeBanners();
+                handleThemes();
+                applyTheme();
+                changeSiteName();
+            }}
+
+            // Run when page is ready
             if (document.readyState === 'loading') {{
-                document.addEventListener('DOMContentLoaded', () => {{
-                    removeAdditionalHeaderElements();
-                    addNetworthElement();
-                    setupReloadAndWebsitesButtons();
-                    removeDonationBanner();
-                    selectDraconicThemeSilently();
-                    updateSiteName();
-                }});
+                document.addEventListener('DOMContentLoaded', runAll);
             }} else {{
-                removeAdditionalHeaderElements();
-                addNetworthElement();
-                setupReloadAndWebsitesButtons();
-                removeDonationBanner();
-                selectDraconicThemeSilently();
-                updateSiteName();
+                runAll();
             }}
         }})();
         """
-        
+
+        # Function to run when the page loads
         def on_loaded():
-            # Inject JavaScript when page loads
             try:
-                window.evaluate_js(f"""
-                (function() {{
-                    setTimeout(() => {{
-                        {reload_script}
-                    }}, 500);
-                }})();
-                """)
-                print("Reload script injection initiated")
+                # Inject JavaScript
+                window.evaluate_js(js_code)
+                logging.info("JavaScript injection successful")
             except Exception as e:
-                print(f"Error injecting reload script: {e}")
-                print(f"Traceback: {traceback.format_exc()}")
+                logging.error(f"Error injecting JavaScript: {e}")
+                logging.error(f"Traceback: {traceback.format_exc()}")
+            
+            # Check for updates
+            check_for_updates_async(window)
         
-        # Create ConfigAPI class to handle theme saving
+        # API for saving themes
         class WebviewAPI:
             def save_theme(self, theme):
-                config = read_config()
-                if config:
-                    config['selected_theme'] = theme
-                    documents_path = os.path.join(os.path.expanduser('~'), 'Documents')
-                    skycrypt_folder_path = os.path.join(documents_path, 'SkyCrypt+')
-                    config_file_path = os.path.join(skycrypt_folder_path, 'config.json')
-                    
-                    with open(config_file_path, 'w') as config_file:
-                        json.dump(config, config_file, indent=4)
-                    print(f"Theme saved: {theme}")
+                try:
+                    config = read_config()
+                    if config:
+                        config['selected_theme'] = theme
+                        appdata_path = os.path.join(os.environ['APPDATA'], 'SkyCrypt+')
+                        config_file_path = os.path.join(appdata_path, 'config.json')
+                        
+                        with open(config_file_path, 'w') as config_file:
+                            json.dump(config, config_file, indent=4)
+                        logging.info(f"Theme saved: {theme}")
+                except Exception as e:
+                    logging.error(f"Error saving theme: {e}")
 
-        # Expose the save_theme method
+        # Add API and event handler
         window.expose(WebviewAPI().save_theme)
-
-        # Add script injection to window's loaded event
         window.events.loaded += on_loaded
         
+        # Start the webview
         webview.start(debug=False)
     
     except Exception as e:
-        print(f"Critical error in creating webview: {e}")
-        print(f"Traceback: {traceback.format_exc()}")
+        logging.error(f"Error creating webview: {e}")
+        logging.error(f"Traceback: {traceback.format_exc()}")
+
+def check_for_updates_async(window):
+    def check_updates_worker():
+        try:
+            update_info = check_for_updates()
+            if update_info and update_info["update_available"]:
+                # Send update info to the window
+                window.evaluate_js(f"""
+                    window.updateInfo = {{
+                        currentVersion: "{update_info['current_version']}",
+                        latestVersion: "{update_info['latest_version']}",
+                        releaseUrl: "{update_info['release_url']}"
+                    }};
+                    
+                    // Dispatch a custom event that our injected script will listen for
+                    const updateEvent = new CustomEvent('skycryptPlusUpdateAvailable', {{ 
+                        detail: window.updateInfo 
+                    }});
+                    document.dispatchEvent(updateEvent);
+                """)
+                logging.info(f"Update available: {update_info['current_version']} → {update_info['latest_version']}")
+            else:
+                logging.info("No updates available or couldn't check for updates")
+        except Exception as e:
+            logging.error(f"Error in update checker thread: {e}")
+    
+    # Start the check in a separate thread to avoid blocking the UI
+    update_thread = threading.Thread(target=check_updates_worker)
+    update_thread.daemon = True
+    update_thread.start()
 
 def main():
     try:
+        update_config_version()
+        setup_logging()
         config = read_config()
         
         if config and 'player_name' in config and 'default_profile' in config:
@@ -916,7 +975,7 @@ def main():
     except Exception as e:
         # Capture full traceback for detailed error information
         error_details = f"Error: {str(e)}\n\nTraceback:\n{traceback.format_exc()}"
-        print(error_details)  # Also print to console
+        logging.error(error_details)
         show_error_window(error_details)
 
 if __name__ == "__main__":
@@ -924,5 +983,5 @@ if __name__ == "__main__":
         main()
     except Exception as e:
         error_details = f"Unhandled Error: {str(e)}\n\nTraceback:\n{traceback.format_exc()}"
-        print(error_details)
+        logging.critical(error_details)
         show_error_window(error_details)
