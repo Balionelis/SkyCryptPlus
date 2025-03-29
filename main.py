@@ -144,9 +144,6 @@ def save_config(username, profile, theme="default.json"):
         # Ensure the folder exists
         os.makedirs(appdata_path, exist_ok=True)
         
-        # Get the current version - should be defined in a central place
-        current_version = "1.0.1"  # This should match the version in update_config_version
-        
         # Prepare configuration data
         config = {
             "version": current_version,
