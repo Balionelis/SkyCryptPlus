@@ -1,6 +1,11 @@
 # Favicons
 favicon.ico
 logo_square.svg
+Patreon-icon-circle.svg
+pin.svg
+
+# Other
+theme_names.txt
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
