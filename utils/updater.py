@@ -4,10 +4,13 @@ import logging
 import threading
 import requests
 from packaging import version
+import time
 
 def check_for_updates():
     try:
-        response = requests.get(
+        # Use a session for connection pooling
+        session = requests.Session()
+        response = session.get(
             "https://api.github.com/repos/Balionelis/SkyCryptPlus/releases/latest",
             headers={"Accept": "application/vnd.github.v3+json"},
             timeout=5
@@ -28,7 +31,6 @@ def check_for_updates():
                         current_version = config.get("version", "0.0.0")
                         
                         update_available = version.parse(latest_version) > version.parse(current_version)
-                        logging.info(f"Version check: Current={current_version}, Latest={latest_version}, Update Available={update_available}")
                         
                         return {
                             "current_version": current_version,
@@ -37,7 +39,6 @@ def check_for_updates():
                             "release_url": release_url
                         }
                 
-                logging.warning("Config file not found or no version specified")
                 return None
                 
             except Exception as e:
@@ -54,6 +55,8 @@ def check_for_updates():
 def check_for_updates_async(window):
     def check_updates_worker():
         try:
+            time.sleep(5)
+            
             update_info = check_for_updates()
             if update_info and update_info["update_available"]:
                 # Inject update notification via JavaScript
@@ -70,8 +73,6 @@ def check_for_updates_async(window):
                     document.dispatchEvent(updateEvent);
                 """)
                 logging.info(f"Update available: {update_info['current_version']} → {update_info['latest_version']}")
-            else:
-                logging.info("No updates available or couldn't check for updates")
         except Exception as e:
             logging.error(f"Error in update checker thread: {e}")
     

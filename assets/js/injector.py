@@ -1,16 +1,55 @@
-def get_js_code(theme):
-    """
-    Returns the JavaScript code to inject into the webview,
-    with the provided theme setting
-    """
+def get_essential_js_code(theme):
     js_code = f"""
     (function() {{
+        function applyTheme() {{
+            try {{
+                let themeToUse = localStorage.getItem('currentTheme');
+                
+                if (!themeToUse) {{
+                    themeToUse = '{theme}';
+                    localStorage.setItem('currentTheme', themeToUse);
+                }}
+                
+                const html = document.documentElement;
+                const themeName = themeToUse.replace('.json', '');
+                html.setAttribute('data-theme', themeName);
+            }} catch (error) {{
+                console.error('Error in applyTheme:', error);
+                const html = document.documentElement;
+                html.setAttribute('data-theme', '{theme}'.replace('.json', ''));
+            }}
+        }}
+
+        applyTheme();
+        
+        window.skycryptEssentialsLoaded = true;
+    }})();
+    """
+    return js_code
+
+def get_enhanced_js_code(theme):
+    js_code = f"""
+    (function() {{
+        if (!window.skycryptEssentialsLoaded) return;
+        
+        function batchDomChanges(callback) {{
+            return window.requestAnimationFrame(() => {{
+                callback();
+            }});
+        }}
+
         function removeHeaderElements() {{
             try {{
-                document.querySelector('.flex.flex-wrap.items-center.gap-x-4.gap-y-2')?.remove();
-                document.querySelector('.text-text.w-full.space-y-4.p-5.font-medium.text-pretty.select-none').remove();
-                document.querySelector('button[aria-haspopup="dialog"][data-state="closed"] svg.lucide-info')?.closest('button')?.remove();
-                document.getElementById('bits-5')?.remove();
+                batchDomChanges(() => {{
+                    const elements = [
+                        document.querySelector('.flex.flex-wrap.items-center.gap-x-4.gap-y-2'),
+                        document.querySelector('.text-text.w-full.space-y-4.p-5.font-medium.text-pretty.select-none'),
+                        document.querySelector('button[aria-haspopup="dialog"][data-state="closed"] svg.lucide-info')?.closest('button'),
+                        document.getElementById('bits-5')
+                    ];
+                    
+                    elements.forEach(el => el && el.remove());
+                }});
             }} catch (error) {{
                 console.error('Error removing header elements:', error);
             }}
@@ -18,11 +57,11 @@ def get_js_code(theme):
 
         function addNetworth() {{
             try {{
-                
                 const existingNetworth = document.getElementById('player_networth');
                 if (existingNetworth) {{
                     existingNetworth.remove();
                 }}
+                
                 const networthButtons = document.querySelectorAll("button");
                 let networthValue = null;
                 
@@ -40,25 +79,27 @@ def get_js_code(theme):
                 }}
                 
                 if (networthValue) {{
-                    const targetDiv = document.querySelector("div.flex.flex-wrap.items-center.gap-x-2.gap-y-3.text-4xl");
-                    
-                    if (targetDiv) {{
-                        const networthEl = document.createElement("span");
-                        networthEl.id = "player_networth";
-                        networthEl.style.cssText = "position: relative; display: inline-block; font-weight: 600; cursor: context-menu; background-color: rgba(127, 127, 127, .2); border-radius: 100px; padding: 0 15px; height: 54px; line-height: 54px; vertical-align: middle; font-size: 30px; margin-left: 10px;";
+                    batchDomChanges(() => {{
+                        const targetDiv = document.querySelector("div.flex.flex-wrap.items-center.gap-x-2.gap-y-3.text-4xl");
                         
-                        const labelSpan = document.createElement("span");
-                        labelSpan.textContent = "Networth: ";
-                        
-                        const valueSpan = document.createElement("span");
-                        valueSpan.textContent = networthValue;
-                        valueSpan.style.color = "#55FF55";
-                        
-                        networthEl.appendChild(labelSpan);
-                        networthEl.appendChild(valueSpan);
-                        
-                        targetDiv.appendChild(networthEl);
-                    }}
+                        if (targetDiv) {{
+                            const networthEl = document.createElement("span");
+                            networthEl.id = "player_networth";
+                            networthEl.style.cssText = "position: relative; display: inline-block; font-weight: 600; cursor: context-menu; background-color: rgba(127, 127, 127, .2); border-radius: 100px; padding: 0 15px; height: 54px; line-height: 54px; vertical-align: middle; font-size: 30px; margin-left: 10px;";
+                            
+                            const labelSpan = document.createElement("span");
+                            labelSpan.textContent = "Networth: ";
+                            
+                            const valueSpan = document.createElement("span");
+                            valueSpan.textContent = networthValue;
+                            valueSpan.style.color = "#55FF55";
+                            
+                            networthEl.appendChild(labelSpan);
+                            networthEl.appendChild(valueSpan);
+                            
+                            targetDiv.appendChild(networthEl);
+                        }}
+                    }});
                 }}
             }} catch (error) {{
                 console.error("Error adding Networth:", error);
@@ -67,17 +108,95 @@ def get_js_code(theme):
 
         function removeBanners() {{
             try {{
-                document.querySelectorAll('figure.banner').forEach(banner => banner.remove());
+                batchDomChanges(() => {{
+                    document.querySelectorAll('figure.banner').forEach(banner => banner.remove());
+                }});
             }} catch (error) {{
                 console.error('Error removing banners:', error);
             }}
         }}
 
+        function setupNavigationWatcher() {{
+            try {{
+                let debounceTimer;
+                
+                const processChanges = () => {{
+                    clearTimeout(debounceTimer);
+                    debounceTimer = setTimeout(() => {{
+                        removeHeaderElements();
+                        addNetworth();
+                        removeBanners();
+                        changeSiteName();
+                    }}, 200);
+                }};
+                
+                const navigationObserver = new MutationObserver(processChanges);
+                navigationObserver.observe(document.body, {{
+                    childList: true, 
+                    subtree: true,
+                    attributes: false,
+                    characterData: false
+                }});
+
+                let lastUrl = location.href;
+                new MutationObserver(() => {{
+                    const currentUrl = location.href;
+                    if (currentUrl !== lastUrl) {{
+                        lastUrl = currentUrl;
+                        window.location.reload();
+                    }}
+                }}).observe(document, {{
+                    subtree: true, 
+                    childList: true,
+                    attributes: false,
+                    characterData: false
+                }});
+            }} catch (error) {{
+                console.error('Error setting up navigation watcher:', error);
+            }}
+        }}
+        
+        function changeSiteName() {{
+            try {{
+                batchDomChanges(() => {{
+                    const linkWithSiteName = document.querySelector('a[data-button-root="true"][href="/"], a[href="/"]');
+                    
+                    if (linkWithSiteName) {{
+                        const childNodes = Array.from(linkWithSiteName.childNodes);
+                        for (let i = 0; i < childNodes.length; i++) {{
+                            const node = childNodes[i];
+                            if (node.nodeType === Node.TEXT_NODE && node.textContent.trim() === "SkyCrypt") {{
+                                node.textContent = " SkyCrypt+ ";
+                                return;
+                            }}
+                        }}
+                    }}
+                }});
+            }} catch (error) {{
+                console.error('Error changing site name:', error);
+            }}
+        }}
+        
+        removeHeaderElements();
+        addNetworth();
+        removeBanners();
+        changeSiteName();
+        setupNavigationWatcher();
+        
+        setTimeout(() => {{
+            addCustomButtons();
+            initAutoRefresh();
+            
+            if (window.updateInfo) {{
+                addUpdateButton(window.updateInfo);
+            }}
+        }}, 500);
+        
         function addCustomButtons() {{
             const pathParts = window.location.pathname.split('/');
             const username = pathParts[2] || '';
             const profile = pathParts[3] || '';
-            const isMainPage = window.location.href === 'https://cupcake.shiiyu.moe/';
+            const isMainPage = window.location.pathname === '/' || !username;
             
             const buttonContainer = document.createElement('div');
             buttonContainer.id = 'custom-buttons-container';
@@ -242,7 +361,6 @@ def get_js_code(theme):
                 }}
             }};
 
-            // Helper function to update UI when theme dropdown is opened
             function updateThemeHighlight() {{
                 try {{
                     const currentTheme = localStorage.getItem('currentTheme') || 'default.json';
@@ -256,7 +374,6 @@ def get_js_code(theme):
                 }}
             }}
 
-            // Helper function to update UI when auto-refresh dropdown is opened
             function updateAutoRefreshHighlight() {{
                 try {{
                     if (window.pywebview && window.pywebview.api) {{
@@ -305,9 +422,9 @@ def get_js_code(theme):
 
             initAutoRefresh();
         }}
-
+        
         let autoRefreshTimer = null;
-
+        
         function setAutoRefreshInterval(interval) {{
             try {{
                 localStorage.setItem('autoRefreshInterval', interval);
@@ -330,7 +447,7 @@ def get_js_code(theme):
                 console.error('Error setting auto refresh interval:', error);
             }}
         }}
-
+        
         function initAutoRefresh() {{
             try {{
                 const interval = localStorage.getItem('autoRefreshInterval');
@@ -342,54 +459,6 @@ def get_js_code(theme):
                 console.error('Error initializing auto refresh:', error);
             }}
         }}
-
-        function setupNavigationWatcher() {{
-            try {{
-                const navigationObserver = new MutationObserver((mutations) => {{
-                    for (const mutation of mutations) {{
-                        // If any nodes were added and they might contain content we care about
-                        if (mutation.addedNodes.length > 0) {{
-                            // Small delay to ensure DOM is fully updated
-                            setTimeout(() => {{
-                                removeHeaderElements();
-                                addNetworth();
-                                removeBanners();
-                                changeSiteName();
-                            }}, 100);
-                        }}
-                    }}
-                }});
-
-                navigationObserver.observe(document.body, {{
-                    childList: true, 
-                    subtree: true 
-                }});
-
-                // watch for URL changes
-                let lastUrl = location.href;
-                new MutationObserver(() => {{
-                    const currentUrl = location.href;
-                    if (currentUrl !== lastUrl) {{
-                        lastUrl = currentUrl;
-                        
-                        // Clear any existing networth element to prevent duplicates
-                        const existingNetworth = document.getElementById('player_networth');
-                        if (existingNetworth) {{
-                            existingNetworth.remove();
-                        }}
-                        
-                        setTimeout(() => {{
-                            removeHeaderElements();
-                            addNetworth();
-                            removeBanners();
-                            changeSiteName();
-                        }}, 100);
-                    }}
-                }}).observe(document, {{subtree: true, childList: true}});
-            }} catch (error) {{
-                console.error('Error setting up navigation watcher:', error);
-            }}
-        }}        
         
         function loadAutoRefreshFromConfig() {{
             try {{
@@ -406,63 +475,7 @@ def get_js_code(theme):
             }} catch (error) {{
                 console.error('Error loading auto refresh from config:', error);
             }}
-        }}               
-
-        if (document.readyState === 'loading') {{
-            document.addEventListener('DOMContentLoaded', loadAutoRefreshFromConfig);
-        }} else {{
-            loadAutoRefreshFromConfig();
-        }}       
-
-        function applyThemeSelection(themeFile) {{
-            try {{
-                const html = document.documentElement;
-                
-                const themeName = themeFile.replace('.json', '');
-                
-                html.setAttribute('data-theme', themeName);
-                
-                localStorage.setItem('currentTheme', themeFile);
-                window.pywebview.api.save_theme(themeFile);
-            }} catch (error) {{
-                console.error('Error applying theme directly:', error);
-            }}
-        }}
-
-        function applyTheme() {{
-            try {{
-                let themeToUse = localStorage.getItem('currentTheme');
-                
-                if (!themeToUse) {{
-                    themeToUse = '{theme}';
-                    localStorage.setItem('currentTheme', themeToUse);
-                }}
-                
-                applyThemeSelection(themeToUse);
-            }} catch (error) {{
-                console.error('Error in applyTheme:', error);
-                applyThemeSelection('{theme}');
-            }}
-        }}
-        
-        function changeSiteName() {{
-            try {{
-                const linkWithSiteName = document.querySelector('a[data-button-root="true"][href="/"], a[href="/"]');
-                
-                if (linkWithSiteName) {{
-                    const childNodes = Array.from(linkWithSiteName.childNodes);
-                    for (let i = 0; i < childNodes.length; i++) {{
-                        const node = childNodes[i];
-                        if (node.nodeType === Node.TEXT_NODE && node.textContent.trim() === "SkyCrypt") {{
-                            node.textContent = " SkyCrypt+ ";
-                            return;
-                        }}
-                    }}
-                }}
-            }} catch (error) {{
-                console.error('Error changing site name:', error);
-            }}
-        }}
+        }}  
         
         function addUpdateButton(updateInfo) {{
             try {{
@@ -488,26 +501,6 @@ def get_js_code(theme):
         document.addEventListener('skycryptPlusUpdateAvailable', (event) => {{
             addUpdateButton(event.detail);
         }});
-        
-        if (window.updateInfo) {{
-            addUpdateButton(window.updateInfo);
-        }}
-
-        function runAll() {{
-            removeHeaderElements();
-            addNetworth();
-            addCustomButtons();
-            removeBanners();
-            applyTheme();
-            changeSiteName();
-            setupNavigationWatcher();
-        }}
-
-        if (document.readyState === 'loading') {{
-            document.addEventListener('DOMContentLoaded', runAll);
-        }} else {{
-            runAll();
-        }}
     }})();
     """
     return js_code

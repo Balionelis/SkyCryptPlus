@@ -2,7 +2,7 @@ import os
 import logging
 from logging.handlers import RotatingFileHandler
 
-def setup_logging():
+def setup_logging(min_level=logging.INFO):
     try:
         appdata_path = os.path.join(os.environ['APPDATA'], 'SkyCrypt+')
         os.makedirs(appdata_path, exist_ok=True)
@@ -20,11 +20,14 @@ def setup_logging():
         file_handler.setFormatter(formatter)
         
         root_logger = logging.getLogger()
-        root_logger.setLevel(logging.INFO)
+        root_logger.setLevel(min_level)
+        
+        for handler in root_logger.handlers[:]:
+            root_logger.removeHandler(handler)
+            
         root_logger.addHandler(file_handler)
         
         logging.info("===== SkyCrypt+ Started =====")
-        logging.info(f"Log file initialized at: {log_file_path}")
         
     except Exception as e:
-        logging.error(f"Error setting up logging: {e}")
+        print(f"Error setting up logging: {e}")

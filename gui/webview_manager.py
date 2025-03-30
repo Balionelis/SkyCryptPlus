@@ -3,10 +3,12 @@ import logging
 import traceback
 import webview
 import json
+import threading
+import time
 
 from config.config_manager import read_config
 from utils.updater import check_for_updates_async
-from assets.js.injector import get_js_code
+from assets.js.injector import get_essential_js_code, get_enhanced_js_code
 
 def create_webview(username, profile, theme=None):
     if not theme:
@@ -63,7 +65,7 @@ def create_webview(username, profile, theme=None):
         window = webview.create_window(
             'SkyCrypt+', 
             url, 
-            width=1200, 
+            width=1400, 
             height=800,
             fullscreen=False,
             background_color='#ffffff',
@@ -71,17 +73,34 @@ def create_webview(username, profile, theme=None):
             js_api=api
         )
         
-        def on_loaded():
+        def inject_essential_js():
             try:
-                # Inject custom theme and functionality
-                js_code = get_js_code(theme)
+                js_code = get_essential_js_code(theme)
                 window.evaluate_js(js_code)
-                logging.info("JavaScript injection successful")
+                logging.info("Essential JavaScript injection successful")
             except Exception as e:
-                logging.error(f"Error injecting JavaScript: {e}")
-                logging.error(f"Traceback: {traceback.format_exc()}")
-            
-            check_for_updates_async(window)
+                logging.error(f"Error injecting essential JavaScript: {e}")
+        
+        def inject_enhanced_js():
+            try:
+                time.sleep(0.5)
+                js_code = get_enhanced_js_code(theme)
+                window.evaluate_js(js_code)
+                logging.info("Enhanced JavaScript injection successful")
+            except Exception as e:
+                logging.error(f"Error injecting enhanced JavaScript: {e}")
+                
+        def check_updates_later():
+            try:
+                time.sleep(3)
+                check_for_updates_async(window)
+            except Exception as e:
+                logging.error(f"Error in delayed update check: {e}")
+        
+        def on_loaded():
+            inject_essential_js()
+            threading.Thread(target=inject_enhanced_js, daemon=True).start()
+            threading.Thread(target=check_updates_later, daemon=True).start()
         
         window.events.loaded += on_loaded
         
