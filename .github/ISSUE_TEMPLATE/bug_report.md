@@ -23,6 +23,9 @@ A clear and concise description of what you expected to happen.
 **Screenshots**
 If applicable, add screenshots to help explain your problem.
 
+**Logs**
+If you don't provide logs, we can't help you. Your logs are located at "%appdata%/SkyCrypt+/skycrypt_plus.log"
+
 **Desktop (please complete the following information):**
  - OS: [e.g. Windows 11, Windows 10]
 

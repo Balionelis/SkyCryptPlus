@@ -3,7 +3,7 @@ import logging
 from config.config_manager import save_config
 from gui.webview_manager import create_webview
 
-# These values are set during setup and used after window closes
+# Global state variables for window interaction
 should_launch_main_app = False
 saved_username = None
 saved_profile = None
@@ -223,6 +223,6 @@ def create_first_time_config_window():
     
     webview.start(debug=False)
     
-    # After setup window closes, start main app if config was saved successfully
+    # Launch main app after setup if configuration was saved successfully
     if should_launch_main_app:
         create_webview(saved_username, saved_profile, saved_theme)

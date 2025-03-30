@@ -5,7 +5,7 @@
 ![GitHub all releases](https://img.shields.io/github/downloads/Balionelis/SkyCryptPlus/total?color=white&style=plastic) ![GitHub license](https://img.shields.io/github/license/Balionelis/SkyCryptPlus?color=white&style=plastic) ![Python](https://img.shields.io/badge/Python-35%25-blue?style=plastic) ![JavaScript](https://img.shields.io/badge/JavaScript-65%25-yellow?style=plastic) [![Support Shiiyu](https://img.shields.io/badge/Support%20on-Patreon-red?logo=patreon&style=plastic)](https://www.patreon.com/shiiyu)
 
 ## Overview
-SkyCrypt+ is a desktop wrapper for the sky.shiiyu.moe website (also known as SkyCrypt), providing a convenient way to access Hypixel SkyBlock player statistics. Built with Python and WebView, it offers a streamlined desktop experience.
+SkyCrypt+ is a desktop wrapper for the cupcake.shiiyu.moe website (also known as SkyCrypt), providing a convenient way to access Hypixel SkyBlock player statistics. Built with Python and WebView, it offers a streamlined desktop experience.
 
 ## Features
 - Quick access to Minecraft SkyBlock statistics
@@ -59,5 +59,5 @@ Contributions are welcome! Please feel free to submit a [Pull Request](https://g
 **[MIT License](https://github.com/Balionelis/SkyCryptPlus/blob/main/LICENSE)**
 
 ## Acknowledgments
-- This is a desktop wrapper for [sky.shiiyu.moe](https://sky.shiiyu.moe) (SkyCrypt)
+- This is a desktop wrapper for [cupcake.shiiyu.moe](https://cupcake.shiiyu.moe/) (SkyCrypt)
 - See [CREDITS.md](https://github.com/Balionelis/SkyCryptPlus/blob/main/CREDITS.md) for full attribution

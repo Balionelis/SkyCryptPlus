@@ -5,12 +5,10 @@ from logging.handlers import RotatingFileHandler
 def setup_logging():
     try:
         appdata_path = os.path.join(os.environ['APPDATA'], 'SkyCrypt+')
-        
         os.makedirs(appdata_path, exist_ok=True)
-        
         log_file_path = os.path.join(appdata_path, 'skycrypt_plus.log')
         
-        # 10 MB max file size with one backup file
+        # Configure rotating file handler with 10MB size limit
         file_handler = RotatingFileHandler(
             log_file_path, 
             maxBytes=10*1024*1024,
@@ -29,4 +27,4 @@ def setup_logging():
         logging.info(f"Log file initialized at: {log_file_path}")
         
     except Exception as e:
-        print(f"Error setting up logging: {e}")
+        logging.error(f"Error setting up logging: {e}")

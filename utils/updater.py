@@ -56,7 +56,7 @@ def check_for_updates_async(window):
         try:
             update_info = check_for_updates()
             if update_info and update_info["update_available"]:
-                # Inject update info into the browser window via JavaScript
+                # Inject update notification via JavaScript
                 window.evaluate_js(f"""
                     window.updateInfo = {{
                         currentVersion: "{update_info['current_version']}",

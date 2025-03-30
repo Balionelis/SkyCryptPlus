@@ -41,7 +41,7 @@ def update_config_version():
         logging.error(f"Error updating config version: {e}")
         return False
 
-def save_config(username, profile, theme="default.json"):
+def save_config(username, profile, theme="default.json", auto_refresh="off"):
     try:
         appdata_path = os.path.join(os.environ['APPDATA'], 'SkyCrypt+')
         config_file_path = os.path.join(appdata_path, 'config.json')
@@ -53,13 +53,14 @@ def save_config(username, profile, theme="default.json"):
             "created_at": str(datetime.datetime.now()),
             "player_name": username,
             "default_profile": profile,
-            "selected_theme": theme
+            "selected_theme": theme,
+            "auto_refresh_interval": auto_refresh
         }
         
         with open(config_file_path, 'w') as config_file:
             json.dump(config, config_file, indent=4)
         
-        logging.info(f"Configuration saved for {username} with profile {profile} and theme {theme}")
+        logging.info(f"Configuration saved for {username} with profile {profile}, theme {theme}, and auto refresh {auto_refresh}")
         return True
     except Exception as e:
         logging.error(f"Error saving config file: {e}")
