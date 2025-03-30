@@ -65,7 +65,7 @@ def create_webview(username, profile, theme=None):
         window = webview.create_window(
             'SkyCrypt+', 
             url, 
-            width=1400, 
+            width=1500, 
             height=800,
             fullscreen=False,
             background_color='#ffffff',
