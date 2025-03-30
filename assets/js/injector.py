@@ -320,6 +320,21 @@ def get_enhanced_js_code(theme):
             autoRefreshHeading.style.cssText = 'padding: 10px; color: #FFFFFF; font-weight: bold; border-bottom: 1px solid #e0e0e0;';
             settingsDropdown.appendChild(autoRefreshHeading);
 
+            function applyThemeSelection(themeFile) {{
+                try {{
+                    localStorage.setItem('currentTheme', themeFile);
+                    const html = document.documentElement;
+                    const themeName = themeFile.replace('.json', '');
+                    html.setAttribute('data-theme', themeName);
+                    
+                    if (window.pywebview && window.pywebview.api) {{
+                        window.pywebview.api.save_theme(themeFile);
+                    }}
+                }} catch (error) {{
+                    console.error('Error applying theme:', error);
+                }}
+            }}
+
             autoRefreshOptions.forEach(option => {{
                 const optionElement = document.createElement('div');
                 optionElement.textContent = option.name;
