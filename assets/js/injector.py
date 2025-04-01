@@ -54,13 +54,16 @@ def get_enhanced_js_code(theme):
                 console.error('Error removing header elements:', error);
             }}
         }}
-
         function addNetworth() {{
             try {{
-                const existingNetworth = document.getElementById('player_networth');
-                if (existingNetworth) {{
-                    existingNetworth.remove();
+                if (window.isAddingNetworth) {{
+                    return;
                 }}
+                
+                window.isAddingNetworth = true;
+                
+                const existingNetworths = document.querySelectorAll('#player_networth');
+                existingNetworths.forEach(el => el.remove());
                 
                 const networthButtons = document.querySelectorAll("button");
                 let networthValue = null;
@@ -101,11 +104,14 @@ def get_enhanced_js_code(theme):
                         }}
                     }});
                 }}
+                setTimeout(() => {{
+                    window.isAddingNetworth = false;
+                }}, 100);
             }} catch (error) {{
                 console.error("Error adding Networth:", error);
+                window.isAddingNetworth = false;
             }}
         }}
-
         function removeBanners() {{
             try {{
                 batchDomChanges(() => {{
@@ -119,18 +125,43 @@ def get_enhanced_js_code(theme):
         function setupNavigationWatcher() {{
             try {{
                 let debounceTimer;
+                let isProcessing = false;
                 
                 const processChanges = () => {{
+                    if (isProcessing) return;
+                    
                     clearTimeout(debounceTimer);
                     debounceTimer = setTimeout(() => {{
+                        isProcessing = true;
+                        
                         removeHeaderElements();
                         addNetworth();
                         removeBanners();
                         changeSiteName();
-                    }}, 200);
+                        
+                        setTimeout(() => {{
+                            isProcessing = false;
+                        }}, 200);
+                    }}, 300);
                 }};
                 
-                const navigationObserver = new MutationObserver(processChanges);
+                const navigationObserver = new MutationObserver((mutations) => {{
+                    const isRelevantChange = mutations.some(mutation => {{
+                        return (
+                            mutation.target.classList && 
+                            (mutation.target.classList.contains('flex') || 
+                            mutation.target.id === 'player_networth' ||
+                            mutation.target.id === 'custom-buttons-container')
+                        ) || 
+                        mutation.addedNodes.length > 3 ||
+                        mutation.removedNodes.length > 3;
+                    }});
+                    
+                    if (isRelevantChange) {{
+                        processChanges();
+                    }}
+                }});
+                
                 navigationObserver.observe(document.body, {{
                     childList: true, 
                     subtree: true,
@@ -150,6 +181,16 @@ def get_enhanced_js_code(theme):
                     childList: true,
                     attributes: false,
                     characterData: false
+                }});
+                processChanges();
+                window.addEventListener('focus', () => {{
+                    const existingNetworths = document.querySelectorAll('#player_networth');
+                    if (existingNetworths.length > 1) {{
+                        existingNetworths.forEach((el, index) => {{
+                            if (index > 0) el.remove();
+                        }});
+                    }}
+                    processChanges();
                 }});
             }} catch (error) {{
                 console.error('Error setting up navigation watcher:', error);
@@ -258,6 +299,7 @@ def get_enhanced_js_code(theme):
             patreonBtn.appendChild(patreonSvg);
 
             const websites = [
+                {{ name: "MinionAH", url: `https://minionah.com/` }},
                 {{ name: "Plancke", url: `https://plancke.io/hypixel/player/stats/${{username}}` }},
                 {{ name: "EliteBot", url: `https://elitebot.dev/@${{username}}/${{profile}}` }},
                 {{ name: "Coflnet", url: `https://sky.coflnet.com/player/${{username}}` }}
@@ -290,7 +332,7 @@ def get_enhanced_js_code(theme):
                 link.href = site.url;
                 link.target = '_blank';
                 link.style.cssText = 'padding: 10px; color: #FFFFFF; text-decoration: none; border-bottom: 1px solid #e0e0e0; transition: background-color 0.2s;';
-                link.onmouseover = () => link.style.backgroundColor = 'rgba(186, 95, 222, 0.1)';
+                link.onmouseover = () => link.style.backgroundColor = 'rgba(224, 224, 224, 0.5)';
                 link.onmouseout = () => link.style.backgroundColor = 'transparent';
                 sitesDropdown.appendChild(link);
             }});
@@ -306,7 +348,7 @@ def get_enhanced_js_code(theme):
                     applyThemeSelection(theme.file);
                     
                     document.querySelectorAll('#themes-dropdown > div').forEach(opt => {{
-                        opt.style.backgroundColor = opt.dataset.file === theme.file ? '#FF424D' : 'transparent';
+                        opt.style.backgroundColor = opt.dataset.file === theme.file ? 'rgba(224, 224, 224, 0.5)' : 'transparent';
                     }});
                     
                     themesDropdown.style.display = 'none';
@@ -345,7 +387,7 @@ def get_enhanced_js_code(theme):
                     setAutoRefreshInterval(option.value);
                     
                     document.querySelectorAll('#settings-dropdown > div:not(:first-child)').forEach(opt => {{
-                        opt.style.backgroundColor = opt.textContent === option.name ? '#FF424D' : 'transparent';
+                        opt.style.backgroundColor = opt.textContent === option.name ? 'rgba(224, 224, 224, 0.5)' : 'transparent';
                     }});
                     
                     settingsDropdown.style.display = 'none';
@@ -382,7 +424,7 @@ def get_enhanced_js_code(theme):
                     
                     document.querySelectorAll('#themes-dropdown > div').forEach(opt => {{
                         const themeFile = opt.dataset.file;
-                        opt.style.backgroundColor = themeFile === currentTheme ? '#FF424D' : 'transparent';
+                        opt.style.backgroundColor = themeFile === currentTheme ? 'rgba(224, 224, 224, 0.5)' : 'transparent';
                     }});
                 }} catch (error) {{
                     console.error('Error updating theme highlight:', error);
@@ -395,7 +437,7 @@ def get_enhanced_js_code(theme):
                         window.pywebview.api.get_auto_refresh().then((interval) => {{
                             document.querySelectorAll('#settings-dropdown > div:not(:first-child)').forEach(opt => {{
                                 const optionValue = opt.dataset.value;
-                                opt.style.backgroundColor = optionValue === interval ? '#FF424D' : 'transparent';
+                                opt.style.backgroundColor = optionValue === interval ? 'rgba(224, 224, 224, 0.5)' : 'transparent';
                             }});
                         }}).catch((error) => {{
                             console.error('Error getting auto refresh setting from config for highlighting:', error);
@@ -404,7 +446,7 @@ def get_enhanced_js_code(theme):
                         const interval = localStorage.getItem('autoRefreshInterval') || 'off';
                         document.querySelectorAll('#settings-dropdown > div:not(:first-child)').forEach(opt => {{
                             const optionValue = opt.dataset.value;
-                            opt.style.backgroundColor = optionValue === interval ? '#FF424D' : 'transparent';
+                            opt.style.backgroundColor = optionValue === interval ? 'rgba(224, 224, 224, 0.5)' : 'transparent';
                         }});
                     }}
                 }} catch (error) {{

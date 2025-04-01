@@ -15,7 +15,7 @@ def create_webview(username, profile, theme=None):
         config = read_config()
         theme = config.get('selected_theme', 'default.json') if config else 'default.json'
     
-    url = f"https://cupcake.shiiyu.moe/stats/{username}/{profile}"
+    url = f"https://sky.shiiyu.moe/stats/{username}/{profile}"
     
     try:
         class Api:
