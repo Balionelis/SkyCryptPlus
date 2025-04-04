@@ -1,42 +1,54 @@
-## Why Does My Antivirus Flag It as Malicious?
+# Why Antivirus Software May Flag SkyCrypt+
 
-Windows Defender (and most modern antivirus software) employs multiple layers of defense to prevent malware from executing. These include:
+## What's Happening?
 
-1. **File Signature Verification**  
-   - Every time you execute a program, Windows Defender checks its hash.  
-   - If enough people have run the file, Microsoft considers it safe.  
+When you download and run SkyCrypt+, your antivirus software might flag it as suspicious or potentially harmful. **This is a false positive** - the application is not malicious.
 
-2. **Cryptographic Signatures**  
-   - Executables often have a digital signature, such as:  
-     ```
-     Publisher: Sun Microsystems
-     ```  
-   - Signed binaries are considered more trustworthy.  
+## Why Does This Happen?
 
-3. **Heuristic Analysis**  
-   - Windows Defender examines program behavior to detect suspicious activity, such as:  
-     - Opening a large number of files.  
-     - Writing large amounts of data to the registry.  
-     - Dropping multiple files onto the disk.  
+### Electron Apps Trigger Common Security Flags
 
-### How This Affects PyInstaller Binaries  
+SkyCrypt+ is built using Electron, which packages web technologies into desktop applications. This technology legitimately does things that security software finds suspicious:
 
-When you create an executable using **PyInstaller**, it behaves in a way that triggers multiple security flags:
+1. **Dynamic Code Execution**
+   - SkyCrypt+ injects custom JavaScript into websites to enhance functionality
+   - This behavior pattern resembles techniques used by malicious software
 
-- **Unique Hash:**  
-  - Each PyInstaller binary is essentially a modified dummy executable acting as a Python interpreter with embedded bytecode.  
-  - This makes it unique, meaning no one has run it before—raising suspicion.  
+2. **Limited Reputation**
+   - Being a smaller application means fewer users have run it
+   - Antivirus software is cautious about executables that aren't widely used
 
-- **Lack of Digital Signature:**  
-  - The executable is not signed, making it appear untrusted.  
+3. **No Code Signing Certificate**
+   - Commercial software is typically signed with certificates that verify its origin
+   - SkyCrypt+ doesn't have an expensive code signing certificate
 
-- **Unusual Behavior:**  
-  - Unlike typical binaries, a PyInstaller executable behaves differently, which is often associated with malware.  
+4. **Web Content Modification**
+   - The app modifies web content to add features and remove ads
+   - This pattern matches how malicious browser extensions operate
 
-- **`--onefile` Mode Warning:**  
-  - If you use the `--onefile` flag, the executable will unpack the entire Python standard library from an embedded ZIP file onto the hard drive.  
-  - This is an uncommon behavior for legitimate applications and is flagged as suspicious.  
+## Is SkyCrypt+ Safe?
 
-### Conclusion  
+**Yes**. The application:
+- Is open source - you can inspect all the code
+- Only modifies the SkyCrypt website display to enhance functionality
+- Doesn't collect any personal data
+- Only communicates with the SkyCrypt website and the GitHub API (to check for updates)
 
-Because of these factors, Windows Defender and other antivirus software may classify PyInstaller binaries as **potential malware** and prevent them from running.
+## What Can You Do?
+
+1. **Add an Exception** to your antivirus software for SkyCrypt+
+2. **Verify the Source** by downloading only from our official GitHub repository
+3. **Check Reviews** from other users
+4. **Install from Source** if you're technically inclined
+
+If you're concerned, you can always run SkyCrypt in your browser instead of using this desktop application.
+
+## Technical Details
+
+Specifically, heuristic detection flags SkyCrypt+ because:
+- It creates a BrowserWindow that loads a remote website
+- It injects custom JavaScript that modifies DOM elements
+- It makes web requests to check for updates
+- It reads and writes local configuration files
+
+These behaviors are legitimate for Electron applications but resemble techniques used by adware and browser hijackers.

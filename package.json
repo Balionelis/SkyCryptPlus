@@ -1,0 +1,53 @@
+{
+  "name": "skycrypt-plus",
+  "version": "1.0.5",
+  "description": "SkyCrypt+ a wrapper for SkyCrypt.",
+  "main": "dist/main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "tsc",
+    "watch": "tsc -w",
+    "dev": "concurrently \"npm run watch\" \"electron .\"",
+    "package-win": "electron-builder --win",
+    "package-linux": "electron-builder --linux",
+    "package-win-single": "electron-builder --win portable",
+    "package-all": "npm run build && electron-builder --win portable nsis --linux AppImage",
+    "format": "prettier --write ."
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "^20.10.5",
+    "concurrently": "^8.2.2",
+    "electron": "^28.1.0",
+    "electron-builder": "^24.9.1",
+    "typescript": "^5.3.3"
+  },
+  "dependencies": {
+    "axios": "^1.6.2",
+    "electron-store": "^8.1.0"
+  },
+  "build": {
+    "appId": "com.skycryptplus.app",
+    "productName": "SkyCrypt+",
+    "win": {
+      "target": ["portable", "nsis"],
+      "icon": "src/assets/images/logo.ico"
+    },
+    "portable": {
+      "artifactName": "SkyCrypt+.exe"
+    },
+    "linux": {
+      "target": "AppImage",
+      "icon": "src/assets/images",
+      "category": "Utility"
+    },
+    "mac": {
+      "icon": "src/assets/images/logo.ico"
+    },
+    "asar": true,
+    "directories": {
+      "output": "release"
+    }
+  }
+}

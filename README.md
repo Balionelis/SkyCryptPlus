@@ -9,7 +9,7 @@
     <img alt="patreon" src="https://img.shields.io/badge/Support%20on-Patreon-red?logo=patreon" />
   </a>
   <a href="">
-    <img alt="patreon" src="https://app.codacy.com/project/badge/Grade/474966301fbd429aa96022c4442744f7" />
+    <img alt="codacy" src="https://app.codacy.com/project/badge/Grade/474966301fbd429aa96022c4442744f7" />
   </a>
 </p>
 
@@ -28,59 +28,92 @@
 </div>
 
 ## Overview
-SkyCrypt+ is a desktop wrapper for the [sky.shiiyu.moe](https://sky.shiiyu.moe/) website (also known as SkyCrypt), providing a convenient way to access Hypixel SkyBlock player statistics. Built with Python and WebView, it offers a streamlined desktop experience.
+
+SkyCrypt+ is a desktop application for [sky.shiiyu.moe](https://sky.shiiyu.moe/) (SkyCrypt), providing enhanced access to Hypixel SkyBlock profiles. Built with Electron and TypeScript, it offers a seamless desktop experience with additional features.
 
 ## Features
-- Quick access to Minecraft SkyBlock statistics
-- Custom UI modifications
-- Easy setup for first-time users
+
+- Enhanced UI with custom themes
+- Networth display integration
+- Auto-refresh capability
+- Quick navigation to other Hypixel Skyblock tools
+- Cross-platform support (Windows and Linux)
 
 ## Download
-Download the latest version from the [Releases](https://github.com/Balionelis/SkyCryptPlus/releases) page.
+
+Get the latest version from the [Releases](https://github.com/Balionelis/SkyCryptPlus/releases) page.
+
+## Available Versions
+
+- **Windows Installer (.exe)** - Standard installation
+- **Windows Portable (.exe)** - No installation required, run directly
+- **Linux AppImage (.AppImage)** - Run directly without installation
 
 ## FAQ
 
-### Is this a RAT? Will it steal my Minecraft account?
-No, it's not a RAT. The project is fully open source, and you can review the code yourself. You can even paste the source code into ChatGPT and it will confirm that it is not malicious. If you're unsure about the release files, you can compile the application yourself using PyInstaller.
+### Is this app safe to use?
 
-### Why does my antivirus flag it as malicious?
-This is a false positive. The application is safe to use. For more information on this issue, please see the [false positive explanation](https://github.com/Balionelis/SkyCryptPlus/blob/main/FALSEPOSITIVE.md) file for an explanation.
+Yes. SkyCrypt+ is fully open source, and you can review all code in this repository. It only enhances the SkyCrypt website interface and doesn't collect any personal data.
+
+### Why does my antivirus flag it as suspicious?
+
+This is a false positive. The application uses Electron and injects scripts to modify web content, which some security software flags as suspicious behavior. See [FALSEPOSITIVE.md](https://github.com/Balionelis/SkyCryptPlus/blob/main/FALSEPOSITIVE.md) for a detailed explanation.
+
+### Where are configuration files stored?
+
+- **Windows**: `%APPDATA%\SkyCrypt+\config.json`
+- **Linux**: `~/.local/share/SkyCrypt+\config.json`
 
 ## For Contributors
 
 ### Prerequisites
-- Python 3.7+
-- pip
 
-### Required Python packages:
-- pywebview
+- Node.js 14+ and npm
 
-### Installation
+### Setup
+
 1. Clone the repository
+
    ```bash
    git clone https://github.com/Balionelis/SkyCryptPlus.git
+   cd SkyCryptPlus
    ```
 
-2. Install required dependencies
+2. Install dependencies
+
    ```bash
-   pip install pywebview
+   npm install
    ```
 
-3. Run the application
+3. Development
+
    ```bash
-   python main.py
+   npm run dev
+   ```
+
+4. Build the application
+   ```bash
+   npm run build
+   npm run package-all    # For Windows and Linux
+   npm run package-win    # For Windows only
+   npm run package-linux  # For Linux only
    ```
 
 ## How to Use
-1. On first launch, enter your Minecraft username and profile name
-2. The application will load your Hypixel stats automatically
+
+1. On first launch, enter your Minecraft username and Hypixel SkyBlock profile name
+2. Select your preferred theme
+3. The application will load your SkyBlock stats with enhanced UI features
 
 ## Contributing
+
 Contributions are welcome! Please feel free to submit a [Pull Request](https://github.com/Balionelis/SkyCryptPlus/pulls).
 
 ## License
+
 **[MIT License](https://github.com/Balionelis/SkyCryptPlus/blob/main/LICENSE)**
 
 ## Acknowledgments
-- This is a desktop wrapper for [sky.shiiyu.moe](https://sky.shiiyu.moe/) (SkyCrypt)
+
+- This is an enhanced desktop client for [sky.shiiyu.moe](https://sky.shiiyu.moe/) (SkyCrypt)
 - See [CREDITS.md](https://github.com/Balionelis/SkyCryptPlus/blob/main/CREDITS.md) for full attribution
