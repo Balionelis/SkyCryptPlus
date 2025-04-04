@@ -92,7 +92,7 @@ export function setupLogging(): Logger {
 
 export function getLogger(): Logger {
   if (!logger) {
-    setupLogging();
+    return setupLogging();
   }
-  return logger!;
+  return logger;
 }

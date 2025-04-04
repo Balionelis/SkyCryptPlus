@@ -23,7 +23,7 @@ export async function checkForUpdates(): Promise<UpdateCheckResult | null> {
     if (response.status === 200) {
       const releaseData = response.data;
       const latestVersion = (releaseData.tag_name || "").replace(/^v/, "");
-      const releasePageUrl = releaseData.html_url || "https://github.com/Balionelis/SkyCryptPlus/releases";
+      const releaseUrl = releaseData.html_url || "https://github.com/Balionelis/SkyCryptPlus/releases";
       
       const config = readConfig();
       if (config) {
@@ -35,7 +35,7 @@ export async function checkForUpdates(): Promise<UpdateCheckResult | null> {
           currentVersion,
           latestVersion,
           updateAvailable,
-          releaseUrl: releasePageUrl
+          releaseUrl
         };
       }
       return null;
@@ -85,8 +85,8 @@ function compareVersions(v1: string, v2: string): number {
   const maxLength = Math.max(parts1.length, parts2.length);
   
   for (let i = 0; i < maxLength; i++) {
-    const part1 = i < parts1.length ? parts1[i] : 0;
-    const part2 = i < parts2.length ? parts2[i] : 0;
+    const part1 = parts1[i] || 0;
+    const part2 = parts2[i] || 0;
     
     if (part1 !== part2) {
       return part1 - part2;
