@@ -8,9 +8,6 @@
   <a href="https://www.patreon.com/shiiyu" target="_blank">
     <img alt="patreon" src="https://img.shields.io/badge/Support%20on-Patreon-red?logo=patreon" />
   </a>
-  <a href="">
-    <img alt="codacy" src="https://app.codacy.com/project/badge/Grade/474966301fbd429aa96022c4442744f7" />
-  </a>
 </p>
 
 <br />
