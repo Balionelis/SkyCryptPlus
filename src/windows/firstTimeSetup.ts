@@ -120,7 +120,7 @@ export function createFirstTimeWindow(): BrowserWindow {
   
   setupWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(setupHtml)}`);
   
-  ipcMain.handle('save-config', (event, username: string, profile: string, theme: string) => {
+  ipcMain.handle('save-config', (_, username: string, profile: string, theme: string) => {
     const saveSuccess = saveConfig(username, profile, theme);
     
     if (saveSuccess) {

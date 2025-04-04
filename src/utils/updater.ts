@@ -23,7 +23,7 @@ export async function checkForUpdates(): Promise<UpdateCheckResult | null> {
     if (response.status === 200) {
       const releaseData = response.data;
       const latestVersion = (releaseData.tag_name || "").replace(/^v/, "");
-      const releaseUrl = releaseData.html_url || "https://github.com/Balionelis/SkyCryptPlus/releases";
+      const releasePageUrl = releaseData.html_url || "https://github.com/Balionelis/SkyCryptPlus/releases";
       
       const config = readConfig();
       if (config) {
@@ -35,7 +35,7 @@ export async function checkForUpdates(): Promise<UpdateCheckResult | null> {
           currentVersion,
           latestVersion,
           updateAvailable,
-          releaseUrl
+          releaseUrl: releasePageUrl
         };
       }
       return null;
@@ -43,36 +43,38 @@ export async function checkForUpdates(): Promise<UpdateCheckResult | null> {
       getLogger().error(`GitHub API returned status code ${response.status}`);
       return null;
     }
-  } catch (err: any) {
-    getLogger().error(`Error checking for updates: ${err.message}`);
+  } catch (err: unknown) {
+    getLogger().error(`Error checking for updates: ${err instanceof Error ? err.message : String(err)}`);
     return null;
   }
 }
 
 export function checkForUpdatesAsync(window: BrowserWindow): void {
-  setTimeout(async () => {
-    try {
-      const updateInfo = await checkForUpdates();
-      
-      if (updateInfo && updateInfo.updateAvailable) {
-        window.webContents.executeJavaScript(`
-          window.updateInfo = {
-            currentVersion: "${updateInfo.currentVersion}",
-            latestVersion: "${updateInfo.latestVersion}",
-            releaseUrl: "${updateInfo.releaseUrl}"
-          };
-          
-          const updateEvent = new CustomEvent('skycryptPlusUpdateAvailable', { 
-            detail: window.updateInfo 
-          });
-          document.dispatchEvent(updateEvent);
-        `);
+  setTimeout(() => {
+    void (async () => {
+      try {
+        const updateInfo = await checkForUpdates();
         
-        getLogger().info(`Update available: ${updateInfo.currentVersion} → ${updateInfo.latestVersion}`);
+        if (updateInfo?.updateAvailable) {
+          window.webContents.executeJavaScript(`
+            window.updateInfo = {
+              currentVersion: "${updateInfo.currentVersion}",
+              latestVersion: "${updateInfo.latestVersion}",
+              releaseUrl: "${updateInfo.releaseUrl}"
+            };
+            
+            const updateEvent = new CustomEvent('skycryptPlusUpdateAvailable', { 
+              detail: window.updateInfo 
+            });
+            document.dispatchEvent(updateEvent);
+          `);
+          
+          getLogger().info(`Update available: ${updateInfo.currentVersion} → ${updateInfo.latestVersion}`);
+        }
+      } catch (err: unknown) {
+        getLogger().error(`Error in update checker: ${err instanceof Error ? err.message : String(err)}`);
       }
-    } catch (err: any) {
-      getLogger().error(`Error in update checker: ${err.message}`);
-    }
+    })();
   }, 5000);
 }
 
@@ -80,7 +82,9 @@ function compareVersions(v1: string, v2: string): number {
   const parts1 = v1.split('.').map(Number);
   const parts2 = v2.split('.').map(Number);
   
-  for (let i = 0; i < Math.max(parts1.length, parts2.length); i++) {
+  const maxLength = Math.max(parts1.length, parts2.length);
+  
+  for (let i = 0; i < maxLength; i++) {
     const part1 = i < parts1.length ? parts1[i] : 0;
     const part2 = i < parts2.length ? parts2[i] : 0;
     

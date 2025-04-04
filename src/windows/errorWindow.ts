@@ -16,6 +16,13 @@ export function showErrorWindow(errorMessage: string): BrowserWindow {
   errorWindow.setMenuBarVisibility(false);
   errorWindow.autoHideMenuBar = true;
   
+  const sanitizedErrorMessage = errorMessage
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+  
   const errorHtml = `
     <!DOCTYPE html>
     <html>
@@ -58,7 +65,7 @@ export function showErrorWindow(errorMessage: string): BrowserWindow {
         <div class="error-container">
             <h2>⚠️ SkyCrypt+ Startup Error</h2>
             <p>An unexpected error occurred while launching the application:</p>
-            <pre>${errorMessage}</pre>
+            <pre>${sanitizedErrorMessage}</pre>
             <p>Please check the console or contact support if this persists.</p>
         </div>
     </body>

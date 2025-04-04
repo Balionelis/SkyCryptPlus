@@ -6,7 +6,7 @@ export class Logger {
   private logFile: string;
   private logLevel: string;
   
-  constructor(logFile: string, logLevel: string = 'info') {
+  constructor(logFile: string, logLevel = 'info') {
     this.logFile = logFile;
     this.logLevel = logLevel;
     
@@ -53,7 +53,7 @@ let logger: Logger | null = null;
 export function setupLogging(): Logger {
   try {
     const appDataPath = path.join(
-      process.env.APPDATA || 
+      process.env.APPDATA ?? 
       (process.platform === 'darwin' 
         ? path.join(os.homedir(), 'Library/Preferences') 
         : path.join(os.homedir(), '.local/share')),
@@ -81,11 +81,11 @@ export function setupLogging(): Logger {
     logger.info("===== SkyCrypt+ Started =====");
     
     return logger;
-  } catch (err: any) {
-    console.error(`Error setting up logging: ${err.message}`);
+  } catch (err: unknown) {
+    console.error(`Error setting up logging: ${err instanceof Error ? err.message : String(err)}`);
     const tempLogFile = path.join(os.tmpdir(), 'skycrypt_plus.log');
     logger = new Logger(tempLogFile);
-    logger.error(`Error setting up logging: ${err.message}`);
+    logger.error(`Error setting up logging: ${err instanceof Error ? err.message : String(err)}`);
     return logger;
   }
 }
@@ -94,5 +94,5 @@ export function getLogger(): Logger {
   if (!logger) {
     setupLogging();
   }
-  return logger as Logger;
+  return logger!;
 }

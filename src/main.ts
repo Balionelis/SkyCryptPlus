@@ -1,12 +1,9 @@
 import { app, BrowserWindow, Menu } from 'electron';
-import * as path from 'path';
 import { setupLogging } from './utils/logger';
 import { readConfig, updateConfigVersion } from './config/configManager';
 import { createFirstTimeWindow } from './windows/firstTimeSetup';
 import { createMainWindow } from './windows/mainWindow';
 import { showErrorWindow } from './windows/errorWindow';
-
-let mainWindow: BrowserWindow | null = null;
 
 async function main() {
   try {
@@ -16,18 +13,18 @@ async function main() {
     
     Menu.setApplicationMenu(null);
     
-    if (config && config.playerName && config.defaultProfile) {
+    if (config?.playerName && config.defaultProfile) {
       const username = config.playerName;
       const profile = config.defaultProfile;
       const theme = config.selectedTheme || 'default.json';
-      mainWindow = createMainWindow(username, profile, theme);
+      return createMainWindow(username, profile, theme);
     } else {
-      createFirstTimeWindow();
+      return createFirstTimeWindow();
     }
-  } catch (err: any) {
-    const errorDetails = `Error: ${err.message}\n\nStack trace:\n${err.stack}`;
+  } catch (err: unknown) {
+    const errorDetails = `Error: ${err instanceof Error ? err.message : String(err)}\n\nStack trace:${err instanceof Error ? err.stack : ''}`;
     console.error(errorDetails);
-    showErrorWindow(errorDetails);
+    return showErrorWindow(errorDetails);
   }
 }
 
@@ -37,9 +34,9 @@ app.whenReady().then(() => {
       window.setMenuBarVisibility(false);
     });
     
-    main();
-  } catch (err: any) {
-    const errorDetails = `Unhandled Error: ${err.message}\n\nStack trace:\n${err.stack}`;
+    void main();
+  } catch (err: unknown) {
+    const errorDetails = `Unhandled Error: ${err instanceof Error ? err.message : String(err)}\n\nStack trace:${err instanceof Error ? err.stack : ''}`;
     console.error(errorDetails);
     showErrorWindow(errorDetails);
   }
@@ -53,6 +50,6 @@ app.on('window-all-closed', () => {
 
 app.on('activate', () => {
   if (BrowserWindow.getAllWindows().length === 0) {
-    main();
+    void main();
   }
 });

@@ -7,13 +7,12 @@ import { getLogger } from '../utils/logger';
 import { getEssentialJsCode, getEnhancedJsCode } from '../assets/scripts/jsInjector';
 import { app } from 'electron';
 
-export function createMainWindow(username: string, profile: string, theme: string = 'default.json'): BrowserWindow {
+export function createMainWindow(username: string, profile: string, theme = 'default.json'): BrowserWindow {
   const mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
     icon: path.join(__dirname, '../assets/images/logo_square.svg'),
     resizable: true,
-    minWidth: 1200,
     maxWidth: 1200,    
     webPreferences: {
       nodeIntegration: false,
@@ -27,7 +26,7 @@ export function createMainWindow(username: string, profile: string, theme: strin
   
   const url = `https://sky.shiiyu.moe/stats/${username}/${profile}`;
   
-  setupMainWindowHandlers(mainWindow);
+  setupMainWindowHandlers();
   
   mainWindow.loadURL(url);
   
@@ -40,8 +39,8 @@ export function createMainWindow(username: string, profile: string, theme: strin
   return mainWindow;
 }
 
-function setupMainWindowHandlers(window: BrowserWindow): void {
-  ipcMain.handle('save-theme', (event, theme: string) => {
+function setupMainWindowHandlers(): void {
+  ipcMain.handle('save-theme', (_, theme: string) => {
     try {
       const config = readConfig();
       if (config) {
@@ -51,13 +50,13 @@ function setupMainWindowHandlers(window: BrowserWindow): void {
         return true;
       }
       return false;
-    } catch (err: any) {
-      getLogger().error(`Error saving theme: ${err.message}`);
+    } catch (err: unknown) {
+      getLogger().error(`Error saving theme: ${err instanceof Error ? err.message : String(err)}`);
       return false;
     }
   });
   
-  ipcMain.handle('save-auto-refresh', (event, interval: string) => {
+  ipcMain.handle('save-auto-refresh', (_, interval: string) => {
     try {
       const config = readConfig();
       if (config) {
@@ -67,26 +66,26 @@ function setupMainWindowHandlers(window: BrowserWindow): void {
         return true;
       }
       return false;
-    } catch (err: any) {
-      getLogger().error(`Error saving auto refresh interval: ${err.message}`);
+    } catch (err: unknown) {
+      getLogger().error(`Error saving auto refresh interval: ${err instanceof Error ? err.message : String(err)}`);
       return false;
     }
   });
   
-  ipcMain.handle('get-auto-refresh', (event) => {
+  ipcMain.handle('get-auto-refresh', () => {
     try {
       const config = readConfig();
-      if (config && config.autoRefreshInterval) {
+      if (config?.autoRefreshInterval) {
         return config.autoRefreshInterval;
       }
       return 'off';
-    } catch (err: any) {
-      getLogger().error(`Error getting auto refresh interval: ${err.message}`);
+    } catch (err: unknown) {
+      getLogger().error(`Error getting auto refresh interval: ${err instanceof Error ? err.message : String(err)}`);
       return 'off';
     }
   });
   
-  ipcMain.handle('reset-config', (event) => {
+  ipcMain.handle('reset-config', () => {
     try {
       const configPath = getConfigPath();
       if (fs.existsSync(configPath)) {
@@ -95,8 +94,8 @@ function setupMainWindowHandlers(window: BrowserWindow): void {
         return true;
       }
       return false;
-    } catch (err: any) {
-      getLogger().error(`Error resetting configuration: ${err.message}`);
+    } catch (err: unknown) {
+      getLogger().error(`Error resetting configuration: ${err instanceof Error ? err.message : String(err)}`);
       return false;
     }
   });
@@ -119,11 +118,11 @@ function injectScripts(window: BrowserWindow, theme: string): void {
         const enhancedScript = getEnhancedJsCode(theme);
         window.webContents.executeJavaScript(enhancedScript);
         getLogger().info("Enhanced JavaScript injection successful");
-      } catch (err: any) {
-        getLogger().error(`Error injecting enhanced JavaScript: ${err.message}`);
+      } catch (err: unknown) {
+        getLogger().error(`Error injecting enhanced JavaScript: ${err instanceof Error ? err.message : String(err)}`);
       }
     }, 1000);
-  } catch (err: any) {
-    getLogger().error(`Error injecting JavaScript: ${err.message}`);
+  } catch (err: unknown) {
+    getLogger().error(`Error injecting JavaScript: ${err instanceof Error ? err.message : String(err)}`);
   }
 }

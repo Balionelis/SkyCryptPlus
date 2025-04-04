@@ -15,7 +15,7 @@ export interface Config {
 
 export function getAppDataPath(): string {
   return path.join(
-    process.env.APPDATA || 
+    process.env.APPDATA ?? 
     (process.platform === 'darwin' 
       ? path.join(os.homedir(), 'Library/Preferences') 
       : path.join(os.homedir(), '.local/share')),
@@ -36,8 +36,8 @@ export function readConfig(): Config | null {
       return JSON.parse(configData) as Config;
     }
     return null;
-  } catch (err: any) {
-    getLogger().error(`Error reading config file: ${err.message}`);
+  } catch (err: unknown) {
+    getLogger().error(`Error reading config file: ${err instanceof Error ? err.message : String(err)}`);
     return null;
   }
 }
@@ -54,14 +54,14 @@ export async function updateConfigVersion(): Promise<boolean> {
       config.version = currentVersion;
       
       const configPath = getConfigPath();
-      fs.writeFileSync(configPath, JSON.stringify(config, null, 4));
+      await fs.promises.writeFile(configPath, JSON.stringify(config, null, 4));
       
       getLogger().info(`Updated config version to ${currentVersion}`);
     }
     
     return true;
-  } catch (err: any) {
-    getLogger().error(`Error updating config version: ${err.message}`);
+  } catch (err: unknown) {
+    getLogger().error(`Error updating config version: ${err instanceof Error ? err.message : String(err)}`);
     return false;
   }
 }
@@ -69,8 +69,8 @@ export async function updateConfigVersion(): Promise<boolean> {
 export function saveConfig(
   username: string, 
   profile: string, 
-  theme: string = "default.json", 
-  autoRefresh: string = "off"
+  theme = "default.json", 
+  autoRefresh = "off"
 ): boolean {
   try {
     const appDataPath = getAppDataPath();
@@ -93,8 +93,8 @@ export function saveConfig(
     
     getLogger().info(`Configuration saved for ${username} with profile ${profile}, theme ${theme}, and auto refresh ${autoRefresh}`);
     return true;
-  } catch (err: any) {
-    getLogger().error(`Error saving config file: ${err.message}`);
+  } catch (err: unknown) {
+    getLogger().error(`Error saving config file: ${err instanceof Error ? err.message : String(err)}`);
     return false;
   }
 }
