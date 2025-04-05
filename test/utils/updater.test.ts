@@ -41,18 +41,18 @@ describe('updater', () => {
     
     const result = await checkForUpdates();
     
-    expect(result).toMatchObject({
+    expect(result).toEqual({
+      currentVersion: '1.0.4',
       latestVersion: '1.0.5',
+      updateAvailable: true,
       releaseUrl: 'https://github.com/Balionelis/SkyCryptPlus/releases/tag/v1.0.5'
     });
-    
-    expect(result?.currentVersion).toBeDefined();
-    expect(typeof result?.updateAvailable).toBe('boolean');
     
     expect(axios.get).toHaveBeenCalledWith(
       'https://api.github.com/repos/Balionelis/SkyCryptPlus/releases/latest',
       expect.objectContaining({
-        headers: { 'Accept': 'application/vnd.github.v3+json' }
+        headers: { 'Accept': 'application/vnd.github.v3+json' },
+        timeout: 5000
       })
     );
   });
@@ -87,7 +87,12 @@ describe('updater', () => {
     
     const result = await checkForUpdates();
     
-    expect(result?.updateAvailable).toBe(false);
+    expect(result).toEqual({
+      currentVersion: '1.0.4',
+      latestVersion: '1.0.4',
+      updateAvailable: false,
+      releaseUrl: 'https://github.com/Balionelis/SkyCryptPlus/releases/tag/v1.0.4'
+    });
   });
 
   it('should check for updates asynchronously', () => {
