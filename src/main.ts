@@ -32,6 +32,16 @@ app.whenReady().then(() => {
   try {
     app.on('browser-window-created', (_, window) => {
       window.setMenuBarVisibility(false);
+      window.setMaximizable(false);
+      window.setFullScreenable(false);
+      
+      window.on('maximize', () => {
+        window.unmaximize();
+      });
+      
+      window.on('enter-full-screen', () => {
+        window.setFullScreen(false);
+      });
     });
     
     void main();

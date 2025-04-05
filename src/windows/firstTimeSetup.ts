@@ -9,6 +9,8 @@ export function createFirstTimeWindow(): BrowserWindow {
     width: 400,
     height: 400,
     resizable: false,
+    maximizable: false,
+    fullscreenable: false,
     icon: path.join(__dirname, '../assets/images/logo_square.svg'),
     webPreferences: {
       nodeIntegration: false,
@@ -19,6 +21,12 @@ export function createFirstTimeWindow(): BrowserWindow {
   
   setupWindow.setMenuBarVisibility(false);
   setupWindow.autoHideMenuBar = true;
+  
+  setupWindow.setFullScreenable(false);
+  
+  setupWindow.on('maximize', () => {
+    setupWindow.unmaximize();
+  });
   
   const setupHtml = `
     <!DOCTYPE html>

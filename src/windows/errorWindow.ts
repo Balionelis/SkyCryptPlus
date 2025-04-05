@@ -6,6 +6,8 @@ export function showErrorWindow(errorMessage: string): BrowserWindow {
     width: 600,
     height: 500,
     resizable: false,
+    maximizable: false,
+    fullscreenable: false,
     icon: path.join(__dirname, '../assets/images/logo_square.svg'),
     webPreferences: {
       nodeIntegration: false,
@@ -15,6 +17,12 @@ export function showErrorWindow(errorMessage: string): BrowserWindow {
   
   errorWindow.setMenuBarVisibility(false);
   errorWindow.autoHideMenuBar = true;
+  
+  errorWindow.setFullScreenable(false);
+  
+  errorWindow.on('maximize', () => {
+    errorWindow.unmaximize();
+  });
   
   const sanitizedErrorMessage = errorMessage
     .replace(/&/g, '&amp;')

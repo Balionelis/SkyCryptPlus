@@ -12,16 +12,22 @@
     "package-linux": "electron-builder --linux",
     "package-win-single": "electron-builder --win portable",
     "package-all": "npm run build && electron-builder --win portable nsis --linux AppImage",
-    "format": "prettier --write ."
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest run --coverage"
   },
   "author": "",
-  "license": "ISC",
+  "license": "MIT",
   "devDependencies": {
     "@types/node": "^20.10.5",
+    "@vitest/coverage-v8": "^1.6.1",
+    "@vitest/ui": "^1.6.1",
     "concurrently": "^8.2.2",
     "electron": "^28.1.0",
     "electron-builder": "^24.9.1",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "vitest": "^1.6.1"
   },
   "dependencies": {
     "axios": "^1.6.2",
@@ -31,7 +37,10 @@
     "appId": "com.skycryptplus.app",
     "productName": "SkyCrypt+",
     "win": {
-      "target": ["portable", "nsis"],
+      "target": [
+        "portable",
+        "nsis"
+      ],
       "icon": "src/assets/images/logo.ico"
     },
     "portable": {

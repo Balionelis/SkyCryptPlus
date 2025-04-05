@@ -11,6 +11,9 @@
   <a href="" target="_blank">
     <img alt="codacy" src="https://app.codacy.com/project/badge/Grade/474966301fbd429aa96022c4442744f7" />
   </a>
+  <a href="https://github.com/Balionelis/SkyCryptPlus/actions" target="_blank">
+    <img alt="CI" src="https://github.com/Balionelis/SkyCryptPlus/workflows/CI/badge.svg" />
+  </a>
 </p>
 
 <br />
@@ -91,7 +94,16 @@ This is a false positive. The application uses Electron and injects scripts to m
    npm run dev
    ```
 
-4. Build the application
+4. Testing
+
+   ```bash
+   npm test          # Run all tests
+   npm run test:ui   # Run tests with UI
+   ```
+
+   **Important**: All tests must pass before submitting a pull request. If you encounter any test failures, please resolve them before submitting.
+
+5. Build the application
    ```bash
    npm run build
    npm run package-all    # For Windows and Linux
@@ -107,7 +119,14 @@ This is a false positive. The application uses Electron and injects scripts to m
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a [Pull Request](https://github.com/Balionelis/SkyCryptPlus/pulls).
+Contributions are welcome! Please follow these guidelines:
+
+1. Fork the repository and create your feature branch
+2. Make your changes and ensure code quality
+3. Run the tests (`npm test`) and ensure all tests pass
+4. Submit a pull request with a clear description of your changes
+
+**Note**: Pull requests with failing tests will not be accepted until fixed.
 
 ## License
 

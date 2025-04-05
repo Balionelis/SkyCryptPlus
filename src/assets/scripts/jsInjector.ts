@@ -428,7 +428,6 @@ export function getEnhancedJsCode(theme: string): string {
           optionElement.textContent = option.name;
           optionElement.dataset.value = option.value;
           optionElement.style.cssText = 'padding: 10px; color: #FFFFFF; background-color: transparent; text-decoration: none; border-bottom: 1px solid #e0e0e0; transition: background-color 0.2s; cursor: pointer;';
-          
           optionElement.onclick = () => {
             setAutoRefreshInterval(option.value);
             
@@ -444,7 +443,7 @@ export function getEnhancedJsCode(theme: string): string {
         
         const resetConfigOption = document.createElement('div');
         resetConfigOption.textContent = 'Reset Configuration';
-        resetConfigOption.style.cssText = 'padding: 10px; color: #FF424D; background-color: transparent; text-decoration: none; border-bottom: 1px solid #e0e0e0; transition: background-color 0.2s; cursor: pointer; margin-top: 10px;';
+        resetConfigOption.style.cssText = 'padding: 5px; color: #FF424D; background-color: transparent; font-weight: bold ; text-decoration: none; border-bottom: 1px solid #e0e0e0; transition: background-color 0.2s; cursor: pointer;';
         
         resetConfigOption.onclick = () => {
           if (confirm('Are you sure you want to reset all configuration? The application will close.')) {

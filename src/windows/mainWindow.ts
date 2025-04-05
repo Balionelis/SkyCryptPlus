@@ -13,6 +13,8 @@ export function createMainWindow(username: string, profile: string, theme = 'def
     height: 800,
     icon: path.join(__dirname, '../assets/images/logo_square.svg'),
     resizable: true,
+    maximizable: false,
+    fullscreenable: false,
     maxWidth: 1200,    
     webPreferences: {
       nodeIntegration: false,
@@ -23,6 +25,12 @@ export function createMainWindow(username: string, profile: string, theme = 'def
   
   mainWindow.setMenuBarVisibility(false);
   mainWindow.autoHideMenuBar = true;
+  
+  mainWindow.setFullScreenable(false);
+  
+  mainWindow.on('maximize', () => {
+    mainWindow.unmaximize();
+  });
   
   const url = `https://sky.shiiyu.moe/stats/${username}/${profile}`;
   
