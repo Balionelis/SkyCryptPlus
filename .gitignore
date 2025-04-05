@@ -96,7 +96,6 @@ Thumbs.db
 *~
 
 # Project specific files
-package-lock.json
 yarn.lock
 
 # Keep all scripts in assets
