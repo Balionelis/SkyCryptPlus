@@ -1,23 +1,24 @@
 {
   "name": "skycrypt-plus",
-  "version": "1.0.5",
+  "version": "1.1.5",
   "description": "SkyCrypt+ a wrapper for SkyCrypt.",
   "main": "dist/main.js",
   "scripts": {
-    "start": "electron .",
+    "start": "npm run build && electron .",
     "build": "tsc",
     "watch": "tsc -w",
     "dev": "concurrently \"npm run watch\" \"electron .\"",
     "package-win": "electron-builder --win",
     "package-linux": "electron-builder --linux",
     "package-win-single": "electron-builder --win portable",
-    "package-all": "npm run build && electron-builder --win portable nsis --linux AppImage",
+    "package-deb": "npm run build && electron-builder --linux deb",
+    "package-all": "npm run build && electron-builder --win portable nsis --linux AppImage deb",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage"
   },
-  "author": "",
+  "author": "Balionelis <balionelis.github@gmail.com>",
   "license": "MIT",
   "devDependencies": {
     "@types/node": "^20.10.5",
@@ -50,9 +51,13 @@
       "artifactName": "SkyCrypt+.exe"
     },
     "linux": {
-      "target": "AppImage",
+      "target": ["AppImage", "deb"],
       "icon": "src/assets/images",
-      "category": "Utility"
+      "category": "Utility",
+      "maintainer": "Balionelis <balionelis.github@gmail.com>"
+    },
+    "deb": {
+      "depends": ["libnotify4", "libxtst6", "libnss3"]
     },
     "mac": {
       "icon": "src/assets/images/logo.ico"

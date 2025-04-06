@@ -264,6 +264,31 @@ export function getEnhancedJsCode(theme: string): string {
         }
       }
       
+      function showNotification(message, duration = 2000) {
+        try {
+          const existingNotification = document.getElementById('copy-notification');
+          if (existingNotification) {
+            existingNotification.remove();
+          }
+
+          const notification = document.createElement('div');
+          notification.id = 'copy-notification';
+          notification.textContent = message;
+          notification.style.cssText = 'position: fixed; bottom: 70px; right: 20px; background-color: #282828; color: white; padding: 10px 15px; border-radius: 5px; z-index: 10000; box-shadow: 0 2px 8px rgba(0,0,0,0.2); transition: opacity 0.3s ease-in-out;';
+          
+          document.body.appendChild(notification);
+          
+          setTimeout(() => {
+            notification.style.opacity = '0';
+            setTimeout(() => {
+              notification.remove();
+            }, 300);
+          }, duration);
+        } catch (error) {
+          console.error('Error showing notification:', error);
+        }
+      }
+      
       removeHeaderElements();
       addNetworth();
       removeBanners();
@@ -328,6 +353,29 @@ export function getEnhancedJsCode(theme: string): string {
         const settingsDropdown = document.createElement('div');
         settingsDropdown.id = 'settings-dropdown';
         settingsDropdown.style.cssText = 'position: fixed; bottom: 80px; right: 20px; z-index: 10000; background-color: #282828; border: 1px solid #FFFFFF; border-radius: 5px; display: none; flex-direction: column; min-width: 250px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);';
+
+        const copyBtn = document.createElement('button');
+        copyBtn.id = 'custom-copy-button';
+        copyBtn.style.cssText = 'width: 35px; height: 35px; background-color: #282828; color: white; border: none; border-radius: 5px; cursor: pointer; padding: 4px; outline: none; display: ' + (isMainPage ? 'none' : 'flex') + '; justify-content: center; align-items: center;';
+        copyBtn.onclick = () => {
+          const currentUrl = window.location.href;
+          navigator.clipboard.writeText(currentUrl)
+            .then(() => {
+              showNotification('URL copied to clipboard!');
+            })
+            .catch(err => {
+              console.error('Error copying URL: ', err);
+              showNotification('Failed to copy URL');
+            });
+        };
+
+        const copySvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        copySvg.setAttribute('viewBox', '0 0 24 24');
+        copySvg.setAttribute('fill', 'none');
+        copySvg.style.width = '100%';
+        copySvg.style.height = '100%';
+        copySvg.innerHTML = '<path d="M15.197 3.35462C16.8703 1.67483 19.4476 1.53865 20.9536 3.05046C22.4596 4.56228 22.3239 7.14956 20.6506 8.82935L18.2268 11.2626M10.0464 14C8.54044 12.4882 8.67609 9.90087 10.3494 8.22108L12.5 6.06212" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" style="fill:none;fill-opacity:1;stroke:#ffffff;stroke-opacity:1" /><path d="M13.9536 10C15.4596 11.5118 15.3239 14.0991 13.6506 15.7789L11.2268 18.2121L8.80299 20.6454C7.12969 22.3252 4.55237 22.4613 3.0464 20.9495C1.54043 19.4377 1.67609 16.8504 3.34939 15.1706L5.77323 12.7373" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" style="fill:none;fill-opacity:1;stroke:#ffffff;stroke-opacity:1" />';
+        copyBtn.appendChild(copySvg);
 
         const patreonBtn = document.createElement('button');
         patreonBtn.id = 'custom-patreon-button';
@@ -538,6 +586,7 @@ export function getEnhancedJsCode(theme: string): string {
         buttonContainer.appendChild(refreshBtn);
         buttonContainer.appendChild(sitesBtn);
         buttonContainer.appendChild(themeBtn);
+        buttonContainer.appendChild(copyBtn);
         buttonContainer.appendChild(settingsBtn);
         buttonContainer.appendChild(patreonBtn);
 

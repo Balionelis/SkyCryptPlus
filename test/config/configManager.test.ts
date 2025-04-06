@@ -12,13 +12,13 @@ vi.mock('../src/utils/logger', () => ({
   })
 }));
 vi.mock('../src/version', () => ({
-  currentVersion: '1.0.5'
+  currentVersion: '1.1.5'
 }));
 
 describe('configManager', () => {
   const mockConfigPath = '/fake/path/config.json';
   const mockConfig = {
-    version: '1.0.5',
+    version: '1.1.5',
     createdAt: '2023-01-01T00:00:00Z',
     playerName: 'TestUser',
     defaultProfile: 'Apple',
@@ -78,7 +78,7 @@ describe('configManager', () => {
     expect(result).toBe(true);
     expect(writeFileSpy).toHaveBeenCalled();
     const writtenConfig = JSON.parse(writeFileSpy.mock.calls[0][1] as string);
-    expect(writtenConfig.version).toBe('1.0.5');
+    expect(writtenConfig.version).toBe('1.1.5');
   });
 
   it('should not update config if versions match', async () => {

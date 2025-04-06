@@ -15,11 +15,12 @@ export function createMainWindow(username: string, profile: string, theme = 'def
     resizable: true,
     maximizable: false,
     fullscreenable: false,
-    maxWidth: 1200,    
+    maxWidth: 1200,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      preload: path.join(__dirname, '../preload/mainPreload.js')
+      preload: path.join(__dirname, '../preload/mainPreload.js'),
+      devTools: true
     }
   });
   
@@ -46,7 +47,6 @@ export function createMainWindow(username: string, profile: string, theme = 'def
   
   return mainWindow;
 }
-
 function setupMainWindowHandlers(): void {
   ipcMain.handle('save-theme', (_, theme: string) => {
     try {

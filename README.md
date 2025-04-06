@@ -51,6 +51,25 @@ Get the latest version from the [Releases](https://github.com/Balionelis/SkyCryp
 - **Windows Installer (.exe)** - Standard installation
 - **Windows Portable (.exe)** - No installation required, run directly
 - **Linux AppImage (.AppImage)** - Run directly without installation
+- **Linux Debian Package (.deb)** - Native installation for Debian-based distributions (Ubuntu, Linux Mint, etc.)
+
+## Updating
+
+### Windows and Portable
+
+- Download the latest version from the [Releases](https://github.com/Balionelis/SkyCryptPlus/releases) page and install/run it. Your settings will be preserved.
+
+### Linux AppImage
+
+- Simply download the newest AppImage file and replace your existing one.
+
+### Debian Package (.deb)
+
+- Download the latest .deb file and install it using:
+  ```bash
+  sudo dpkg -i skycrypt-plus_x.x.x_amd64.deb
+  ```
+- Or use your system's package manager to install the downloaded file.
 
 ## FAQ
 
@@ -109,6 +128,7 @@ This is a false positive. The application uses Electron and injects scripts to m
    npm run package-all    # For Windows and Linux
    npm run package-win    # For Windows only
    npm run package-linux  # For Linux only
+   npm run package-deb    # For Debian package only
    ```
 
 ## How to Use
