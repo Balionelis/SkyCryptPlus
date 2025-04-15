@@ -19,18 +19,18 @@ export async function checkForUpdates(): Promise<UpdateCheckResult | null> {
         timeout: 5000
       }
     );
-    
+
     if (response.status === 200) {
       const releaseData = response.data;
       const latestVersion = (releaseData.tag_name || "").replace(/^v/, "");
       const releaseUrl = releaseData.html_url || "https://github.com/Balionelis/SkyCryptPlus/releases";
-      
+
       const config = readConfig();
       if (config) {
         const currentVersion = config.version;
-        
+
         const updateAvailable = compareVersions(latestVersion, currentVersion) > 0;
-        
+
         return {
           currentVersion,
           latestVersion,
@@ -54,7 +54,7 @@ export function checkForUpdatesAsync(window: BrowserWindow): void {
     void (async () => {
       try {
         const updateInfo = await checkForUpdates();
-        
+
         if (updateInfo?.updateAvailable) {
           window.webContents.executeJavaScript(`
             window.updateInfo = {
@@ -62,13 +62,13 @@ export function checkForUpdatesAsync(window: BrowserWindow): void {
               latestVersion: "${updateInfo.latestVersion}",
               releaseUrl: "${updateInfo.releaseUrl}"
             };
-            
-            const updateEvent = new CustomEvent('skycryptPlusUpdateAvailable', { 
-              detail: window.updateInfo 
+
+            const updateEvent = new CustomEvent('skycryptPlusUpdateAvailable', {
+              detail: window.updateInfo
             });
             document.dispatchEvent(updateEvent);
           `);
-          
+
           getLogger().info(`Update available: ${updateInfo.currentVersion} → ${updateInfo.latestVersion}`);
         }
       } catch (err: unknown) {
@@ -81,17 +81,17 @@ export function checkForUpdatesAsync(window: BrowserWindow): void {
 export function compareVersions(v1: string, v2: string): number {
   const parts1 = v1.split('.').map(Number);
   const parts2 = v2.split('.').map(Number);
-  
+
   const maxLength = Math.max(parts1.length, parts2.length);
-  
+
   for (let i = 0; i < maxLength; i++) {
     const part1 = parts1[i] || 0;
     const part2 = parts2[i] || 0;
-    
+
     if (part1 !== part2) {
       return part1 - part2;
     }
   }
-  
+
   return 0;
 }

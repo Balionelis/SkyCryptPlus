@@ -1,8 +1,8 @@
-import { BrowserWindow, ipcMain } from 'electron';
-import * as path from 'path';
-import { saveConfig } from '../config/configManager';
-import { createMainWindow } from './mainWindow';
-import { getLogger } from '../utils/logger';
+import { BrowserWindow, ipcMain } from "electron";
+import * as path from "path";
+import { saveConfig } from "../config/configManager";
+import { createMainWindow } from "./mainWindow";
+import { getLogger } from "../utils/logger";
 
 export function createFirstTimeWindow(): BrowserWindow {
   const setupWindow = new BrowserWindow({
@@ -11,23 +11,23 @@ export function createFirstTimeWindow(): BrowserWindow {
     resizable: false,
     maximizable: false,
     fullscreenable: false,
-    icon: path.join(__dirname, '../assets/images/logo_square.svg'),
+    icon: path.join(__dirname, "../assets/images/logo_square.svg"),
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      preload: path.join(__dirname, '../preload/firstTimePreload.js')
-    }
+      preload: path.join(__dirname, "../preload/firstTimePreload.js"),
+    },
   });
-  
+
   setupWindow.setMenuBarVisibility(false);
   setupWindow.autoHideMenuBar = true;
-  
+
   setupWindow.setFullScreenable(false);
-  
-  setupWindow.on('maximize', () => {
+
+  setupWindow.on("maximize", () => {
     setupWindow.unmaximize();
   });
-  
+
   const setupHtml = `
     <!DOCTYPE html>
     <html>
@@ -39,7 +39,7 @@ export function createFirstTimeWindow(): BrowserWindow {
               height: 100%;
               overflow: hidden
             }
-            
+
             body {
                 font-family: Arial, sans-serif;
                 display: flex;
@@ -114,7 +114,7 @@ export function createFirstTimeWindow(): BrowserWindow {
                 const username = document.getElementById('username').value;
                 const profile = document.getElementById('profile').value;
                 const theme = document.getElementById('theme').value;
-                
+
                 if (username && profile) {
                     window.api.saveConfig(username, profile, theme);
                 } else {
@@ -125,22 +125,27 @@ export function createFirstTimeWindow(): BrowserWindow {
     </body>
     </html>
   `;
-  
-  setupWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(setupHtml)}`);
-  
-  ipcMain.handle('save-config', (_, username: string, profile: string, theme: string) => {
-    const saveSuccess = saveConfig(username, profile, theme);
-    
-    if (saveSuccess) {
-      getLogger().info(`First time setup completed for ${username}`);
-      
-      setupWindow.close();
-      
-      createMainWindow(username, profile, theme);
-    }
-    
-    return saveSuccess;
-  });
-  
+
+  setupWindow.loadURL(
+    `data:text/html;charset=utf-8,${encodeURIComponent(setupHtml)}`,
+  );
+
+  ipcMain.handle(
+    "save-config",
+    (_, username: string, profile: string, theme: string) => {
+      const saveSuccess = saveConfig(username, profile, theme);
+
+      if (saveSuccess) {
+        getLogger().info(`First time setup completed for ${username}`);
+
+        setupWindow.close();
+
+        createMainWindow(username, profile, theme);
+      }
+
+      return saveSuccess;
+    },
+  );
+
   return setupWindow;
 }

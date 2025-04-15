@@ -12,18 +12,25 @@ vi.mock('../src/utils/logger', () => ({
   })
 }));
 vi.mock('../src/version', () => ({
-  currentVersion: '1.1.5'
+  currentVersion: '1.2.5'
 }));
 
 describe('configManager', () => {
   const mockConfigPath = '/fake/path/config.json';
   const mockConfig = {
-    version: '1.1.5',
+    version: '1.2.5',
     createdAt: '2023-01-01T00:00:00Z',
     playerName: 'TestUser',
     defaultProfile: 'Apple',
     selectedTheme: 'default.json',
-    autoRefreshInterval: 'off'
+    autoRefreshInterval: 'off',
+    savedProfiles: [
+      {
+        playerName: 'TestUser',
+        profileName: 'Apple',
+        displayName: 'TestUser - Apple'
+      }
+    ]
   };
 
   beforeEach(() => {
@@ -66,7 +73,11 @@ describe('configManager', () => {
   });
 
   it('should update config version', async () => {
-    const oldConfig = { ...mockConfig, version: '1.0.4' };
+    const oldConfig = { 
+      ...mockConfig, 
+      version: '1.0.4',
+      savedProfiles: undefined 
+    };
     
     vi.spyOn(fs, 'existsSync').mockReturnValue(true);
     vi.spyOn(fs, 'readFileSync').mockReturnValue(JSON.stringify(oldConfig));
@@ -78,7 +89,7 @@ describe('configManager', () => {
     expect(result).toBe(true);
     expect(writeFileSpy).toHaveBeenCalled();
     const writtenConfig = JSON.parse(writeFileSpy.mock.calls[0][1] as string);
-    expect(writtenConfig.version).toBe('1.1.5');
+    expect(writtenConfig.version).toBe('1.2.5');
   });
 
   it('should not update config if versions match', async () => {

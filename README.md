@@ -91,7 +91,6 @@ This is a false positive. The application uses Electron and injects scripts to m
 ### Prerequisites
 
 - Node.js 14+ and npm
-
 ### Setup
 
 1. Clone the repository

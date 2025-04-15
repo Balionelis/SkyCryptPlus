@@ -14,23 +14,23 @@ export function showErrorWindow(errorMessage: string): BrowserWindow {
       contextIsolation: true
     }
   });
-  
+
   errorWindow.setMenuBarVisibility(false);
   errorWindow.autoHideMenuBar = true;
-  
+
   errorWindow.setFullScreenable(false);
-  
+
   errorWindow.on('maximize', () => {
     errorWindow.unmaximize();
   });
-  
+
   const sanitizedErrorMessage = errorMessage
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
-  
+
   const errorHtml = `
     <!DOCTYPE html>
     <html>
@@ -79,8 +79,8 @@ export function showErrorWindow(errorMessage: string): BrowserWindow {
     </body>
     </html>
   `;
-  
+
   errorWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(errorHtml)}`);
-  
+
   return errorWindow;
 }
